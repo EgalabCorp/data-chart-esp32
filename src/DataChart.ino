@@ -9,7 +9,7 @@
 #define AMPERAGE_MAX 1200
 
 // The date responsible for the file naming which is holding the data.
-static int displayDate;
+int displayDate, dataIndex;
 
 // Clock hardware module.
 DS3231 Clock;
@@ -248,21 +248,21 @@ void getData()
 
 void setData()
 {
-	getData();
-
-	File file = SPIFFS.open(getDataFileName());
-	if (!file)
-		Serial.println("A file-t nem sikerült megnyitni adatfeldolgozásra.");
-
 	struct HourlyData
 	{
 		String ptr = "";
 		int min = AMPERAGE_MAX;
-		int max, avg, time, ind, cnt = 1;
+		int max, avg, time, cnt = 1;
 	} tmp;
 
-	Serial.print("Index = ");
-	Serial.println(tmp.ind);
+	if (tmp.time == Clock.getHour(timeClock.format12, timeClock.pm))
+		return;
+
+	File file = SPIFFS.open(getDataFileName());
+	if (!file)
+		return;
+
+	tmp.time = Clock.getHour(timeClock.format12, timeClock.pm);
 
 	while (file.available())
 	{
@@ -280,17 +280,11 @@ void setData()
 			tmp.ptr += fileRead;
 	}
 
-	Serial.println("The file has been processed.");
+	processedData[dataIndex].min = tmp.min;
+	processedData[dataIndex].max = tmp.max;
+	processedData[dataIndex].avg = tmp.avg;
 
-	if (tmp.time != Clock.getHour(timeClock.format12, timeClock.pm))
-	{
-		processedData[tmp.ind].min = tmp.min;
-		processedData[tmp.ind].max = tmp.max;
-		processedData[tmp.ind].avg = tmp.avg;
-
-		tmp.ind = tmp.ind <= *(&processedData + 1) - processedData ? tmp.ind + 1 : tmp.ind;
-		tmp.time = Clock.getMinute();
-	}
+	dataIndex = dataIndex <= *(&processedData + 1) - processedData ? dataIndex + 1 : dataIndex;
 }
 
 String getDataFileName()
@@ -497,6 +491,8 @@ void setup()
 // Process
 void loop()
 {
-	setData();
 	server.handleClient();
+
+	getData();
+	setData();
 }
