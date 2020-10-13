@@ -30,7 +30,7 @@ struct Sensor
 
 struct CollectedData
 {
-	int min, max, sum, count, time, timeCount;
+	int min, max, sum, cnt, time;
 } collectedData;
 
 struct ProcessedData
@@ -223,7 +223,6 @@ void getData()
 		return;
 
 	collectedData.time = Clock.getMinute();
-	collectedData.count++;
 
 	for (size_t i = 0; i < *(&sensors + 1) - sensors; i++)
 	{
@@ -234,17 +233,17 @@ void getData()
 		collectedData.sum += sensors[i].Irms;
 	}
 
-	if (collectedData.timeCount == 5)
+	if (collectedData.cnt == 5)
 	{
-		writeDataToCSV(collectedData.min, collectedData.max, collectedData.sum / collectedData.count);
+		writeDataToCSV(collectedData.min, collectedData.max, collectedData.sum / collectedData.cnt);
 
 		collectedData.min = AMPERAGE_MAX;
 		collectedData.max = 0;
 		collectedData.sum = 0;
-		collectedData.count = 0;
+		collectedData.cnt = 0;
 	}
 
-	collectedData.timeCount++;
+	collectedData.cnt++;
 }
 
 void setData()
@@ -259,8 +258,11 @@ void setData()
 	{
 		String ptr = "";
 		int min = AMPERAGE_MAX;
-		int max, avg, cnt, time, ind = 1;
+		int max, avg, time, ind, cnt = 1;
 	} tmp;
+
+	Serial.print("Index = ");
+	Serial.println(tmp.ind);
 
 	while (file.available())
 	{
@@ -270,13 +272,15 @@ void setData()
 		{
 			tmp.min = tmp.ptr.substring(18, 22).toInt() < tmp.min ? tmp.ptr.substring(18, 22).toInt() : tmp.min;
 			tmp.max = tmp.ptr.substring(23, 27).toInt() > tmp.max ? tmp.ptr.substring(23, 27).toInt() : tmp.max;
-			tmp.avg = tmp.ptr.substring(28, 32).toInt() / tmp.cnt;
+			tmp.avg = round(tmp.ptr.substring(28, 32).toInt() / tmp.cnt);
 
 			tmp.cnt++;
 		}
 		else
 			tmp.ptr += fileRead;
 	}
+
+	Serial.println("The file has been processed.");
 
 	if (tmp.time != Clock.getHour(timeClock.format12, timeClock.pm))
 	{
@@ -493,6 +497,6 @@ void setup()
 // Process
 void loop()
 {
-	server.handleClient();
 	setData();
+	server.handleClient();
 }
