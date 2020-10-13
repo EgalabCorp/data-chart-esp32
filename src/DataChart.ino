@@ -9,7 +9,7 @@
 #define AMPERAGE_MAX 1200
 
 // The date responsible for the file naming which is holding the data.
-int displayDate, dataIndex;
+int displayDate;
 
 // Clock hardware module.
 DS3231 Clock;
@@ -30,8 +30,15 @@ struct Sensor
 
 struct CollectedData
 {
-	int min, max, sum, cnt, time;
+	int min, max, sum, time, cnt = 1;
 } collectedData;
+
+struct HourlyData
+{
+	String ptr = "";
+	int min = AMPERAGE_MAX;
+	int max, avg, time, cnt = 1;
+} tmp;
 
 struct ProcessedData
 {
@@ -46,11 +53,40 @@ int getCurrentDate()
 	return String(getDate).toInt();
 }
 
+String getDataFileName()
+{
+	String fileName = "/";
+	fileName += displayDate;
+	fileName += ".csv";
+
+	return fileName;
+}
+
+String fileToString(const char *path)
+{
+	File file = SPIFFS.open(path);
+	if (!file)
+	{
+		Serial.println("Failed to open file. (File to String)");
+		return "";
+	}
+
+	String output = "";
+	while (file.available())
+	{
+		char fileRead = file.read();
+		output += fileRead;
+	}
+
+	return output;
+}
+
 // On connect, the device would recieve the HTML data.
 void handleOnConnect()
 {
 	Serial.println("Connection handling called.");
 
+	setData();
 	makePage();								// Making HTML page.
 	streamFile("/index.html", "text/html"); // Streaming HTML.
 }
@@ -213,9 +249,15 @@ Feldologzast
 
 Kiiras
 - ha megvan a tomb, akkor irjuk ki
-
-
 */
+
+void resetValues(int min, int max, int avg, int count)
+{
+	min = AMPERAGE_MAX;
+	max = 0;
+	avg = 0;
+	count = 1;
+}
 
 void getData()
 {
@@ -236,33 +278,23 @@ void getData()
 	if (collectedData.cnt == 5)
 	{
 		writeDataToCSV(collectedData.min, collectedData.max, collectedData.sum / collectedData.cnt);
+		Serial.println("5 perc eltelt, és az adatok ki lettek írva a CSV-be.");
 
-		collectedData.min = AMPERAGE_MAX;
-		collectedData.max = 0;
-		collectedData.sum = 0;
-		collectedData.cnt = 0;
+		resetValues(collectedData.min, collectedData.max, collectedData.sum, collectedData.cnt);
 	}
 
 	collectedData.cnt++;
+
+	Serial.println("getData function lefutott.");
 }
+
+// * 0020.10.08. 13:07,0000,0000,0000
 
 void setData()
 {
-	struct HourlyData
-	{
-		String ptr = "";
-		int min = AMPERAGE_MAX;
-		int max, avg, time, cnt = 1;
-	} tmp;
-
-	if (tmp.time == Clock.getHour(timeClock.format12, timeClock.pm))
-		return;
-
 	File file = SPIFFS.open(getDataFileName());
 	if (!file)
 		return;
-
-	tmp.time = Clock.getHour(timeClock.format12, timeClock.pm);
 
 	while (file.available())
 	{
@@ -273,27 +305,45 @@ void setData()
 			tmp.min = tmp.ptr.substring(18, 22).toInt() < tmp.min ? tmp.ptr.substring(18, 22).toInt() : tmp.min;
 			tmp.max = tmp.ptr.substring(23, 27).toInt() > tmp.max ? tmp.ptr.substring(23, 27).toInt() : tmp.max;
 			tmp.avg = round(tmp.ptr.substring(28, 32).toInt() / tmp.cnt);
-
 			tmp.cnt++;
+
+			if (tmp.time != tmp.ptr.substring(12, 14).toInt())
+			{
+				tmp.time = tmp.ptr.substring(12, 14).toInt();
+
+				String x;
+				x += "20";
+				x += tmp.ptr.substring(2, 4);
+				x += tmp.ptr.substring(5, 7);
+				x += tmp.ptr.substring(8, 10);
+
+				if (x.toInt() == displayDate)
+				{
+					processedData[tmp.ptr.substring(12, 13).toInt()].min = tmp.min;
+					processedData[tmp.ptr.substring(12, 13).toInt()].max = tmp.max;
+					processedData[tmp.ptr.substring(12, 13).toInt()].avg = tmp.avg;
+
+					resetValues(tmp.min, tmp.max, tmp.avg, tmp.cnt);
+				}
+			}
+
+			tmp.ptr = "";
 		}
 		else
 			tmp.ptr += fileRead;
 	}
 
-	processedData[dataIndex].min = tmp.min;
-	processedData[dataIndex].max = tmp.max;
-	processedData[dataIndex].avg = tmp.avg;
+	resetValues(tmp.min, tmp.max, tmp.avg, tmp.cnt);
 
-	dataIndex = dataIndex <= *(&processedData + 1) - processedData ? dataIndex + 1 : dataIndex;
-}
-
-String getDataFileName()
-{
-	String fileName = "/";
-	fileName += displayDate;
-	fileName += ".csv";
-
-	return fileName;
+	for (size_t i = 0; i < *(&processedData + 1) - processedData; i++)
+	{
+		Serial.println("Minimum:");
+		Serial.println(processedData[i].min);
+		Serial.println("Maximum:");
+		Serial.println(processedData[i].max);
+		Serial.println("Average:");
+		Serial.println(processedData[i].avg);
+	}
 }
 
 void writeDataToCSV(int min, int max, int avg)
@@ -333,80 +383,42 @@ void writeDataToCSV(int min, int max, int avg)
 	file.close();
 }
 
-String fileToString(const char *path)
-{
-	File file = SPIFFS.open(path);
-	if (!file)
-	{
-		Serial.println("Failed to open file. (File to String)");
-		return "";
-	}
-
-	String output = "";
-	while (file.available())
-	{
-		char fileRead = file.read();
-		output += fileRead;
-	}
-
-	return output;
-}
-
 void generateChart(File html)
 {
-	struct DataRead
-	{
-		int min, max, avg;
-	} dataRead;
-
 	File file = SPIFFS.open(getDataFileName());
 	if (!file)
-	{
-		Serial.println("Error loading data file.");
 		return;
-	}
 
-	//0020.10.08. 13:07,0000,0000,0000
-	String ptr = "";
+	String ptr;
 
-	for (size_t i = 0; i < 24; i++)
+	for (size_t i = 0; i < *(&processedData + 1) - processedData; i++)
 	{
 		char fileRead = file.read();
 
 		if (fileRead == '\n')
 		{
-			dataRead.min = processedData[i].min;
-			dataRead.max = processedData[i].max;
-			dataRead.avg = processedData[i].avg;
-
-			Serial.println("----------");
-			Serial.println(dataRead.min);
-			Serial.println(dataRead.max);
-			Serial.println(dataRead.avg);
-
 			html.print("<div class='bar' style='--bar-value:");
-			html.print(round(dataRead.max / 12));
+			html.print(round(processedData[i].max / 12));
 			html.print("%;' data-name='");
-			html.print(ptr.substring(13, 14));
+			html.print(ptr.substring(12, 14));
 			html.print("h' title='");
-			html.print(String(dataRead.max));
+			html.print(String(processedData[i].max));
 			html.print("'>");
 			html.print("<div class='bar2' style='--bar-value:");
-			html.print(round(dataRead.avg / dataRead.max * 100));
+			html.print(round(processedData[i].avg / processedData[i].max * 100));
 			html.print("%;' data-name='");
-			html.print(ptr.substring(13, 14));
+			html.print(ptr.substring(12, 14));
 			html.print("h' title='");
-			html.print(String(dataRead.avg));
+			html.print(String(processedData[i].avg));
 			html.print("'>");
 			html.print("<div class='bar3' style='--bar-value:");
-			html.print(round(dataRead.min / dataRead.avg * 100));
+			html.print(round(processedData[i].min / processedData[i].avg * 100));
 			html.print("%;' data-name='");
-			html.print(ptr.substring(13, 14));
+			html.print(ptr.substring(12, 14));
 			html.print("h' title='");
-			html.print(String(dataRead.min));
+			html.print(String(processedData[i].min));
 			html.print("'>");
 			html.print("</div></div></div>");
-
 			ptr = "";
 		}
 		else
@@ -492,7 +504,5 @@ void setup()
 void loop()
 {
 	server.handleClient();
-
 	getData();
-	setData();
 }
