@@ -30,7 +30,7 @@ struct Sensor
 
 struct CollectedData
 {
-	int min, max, sum, time, cnt = 1;
+	int min, max, sum, time, cnt;
 } collectedData;
 
 struct HourlyData
@@ -251,14 +251,6 @@ Kiiras
 - ha megvan a tomb, akkor irjuk ki
 */
 
-void resetValues(int min, int max, int avg, int count)
-{
-	min = AMPERAGE_MAX;
-	max = 0;
-	avg = 0;
-	count = 1;
-}
-
 void getData()
 {
 	if (collectedData.time == Clock.getMinute())
@@ -280,7 +272,10 @@ void getData()
 		writeDataToCSV(collectedData.min, collectedData.max, collectedData.sum / collectedData.cnt);
 		Serial.println("5 perc eltelt, és az adatok ki lettek írva a CSV-be.");
 
-		resetValues(collectedData.min, collectedData.max, collectedData.sum, collectedData.cnt);
+		collectedData.min = AMPERAGE_MAX;
+		collectedData.max = 0;
+		collectedData.sum = 0;
+		collectedData.cnt = 0;
 	}
 
 	collectedData.cnt++;
@@ -323,7 +318,10 @@ void setData()
 					processedData[tmp.ptr.substring(12, 13).toInt()].max = tmp.max;
 					processedData[tmp.ptr.substring(12, 13).toInt()].avg = tmp.avg;
 
-					resetValues(tmp.min, tmp.max, tmp.avg, tmp.cnt);
+					tmp.min = AMPERAGE_MAX;
+					tmp.max = 0;
+					tmp.avg = 0;
+					tmp.cnt = 1;
 				}
 			}
 
@@ -331,18 +329,6 @@ void setData()
 		}
 		else
 			tmp.ptr += fileRead;
-	}
-
-	resetValues(tmp.min, tmp.max, tmp.avg, tmp.cnt);
-
-	for (size_t i = 0; i < *(&processedData + 1) - processedData; i++)
-	{
-		Serial.println("Minimum:");
-		Serial.println(processedData[i].min);
-		Serial.println("Maximum:");
-		Serial.println(processedData[i].max);
-		Serial.println("Average:");
-		Serial.println(processedData[i].avg);
 	}
 }
 
@@ -431,7 +417,7 @@ void makeHead(File file)
 {
 	file.print("<head>");
 	file.print("<style>");
-	file.print(fileToString("/style2.css"));
+	file.print(fileToString("/style.css"));
 	file.print("</style>");
 	file.print("</head>");
 }
