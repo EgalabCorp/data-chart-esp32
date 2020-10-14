@@ -30,15 +30,8 @@ struct Sensor
 
 struct CollectedData
 {
-	int min, max, sum, time, cnt;
+	int min, max, sum, cnt, time;
 } collectedData;
-
-struct HourlyData
-{
-	String ptr = "";
-	int min = AMPERAGE_MAX;
-	int max, avg, time, cnt = 1;
-} tmp;
 
 struct ProcessedData
 {
@@ -53,40 +46,12 @@ int getCurrentDate()
 	return String(getDate).toInt();
 }
 
-String getDataFileName()
-{
-	String fileName = "/";
-	fileName += displayDate;
-	fileName += ".csv";
-
-	return fileName;
-}
-
-String fileToString(const char *path)
-{
-	File file = SPIFFS.open(path);
-	if (!file)
-	{
-		Serial.println("Failed to open file. (File to String)");
-		return "";
-	}
-
-	String output = "";
-	while (file.available())
-	{
-		char fileRead = file.read();
-		output += fileRead;
-	}
-
-	return output;
-}
-
 // On connect, the device would recieve the HTML data.
 void handleOnConnect()
 {
 	Serial.println("Connection handling called.");
 
-	setData();
+	setData();								// Aligns the data for the HTML page.
 	makePage();								// Making HTML page.
 	streamFile("/index.html", "text/html"); // Streaming HTML.
 }
@@ -225,32 +190,6 @@ void getNextDate()
 		setDisplayDate(i);
 }
 
-/*
-dataProcess()
-
-- szedjuk szet az adatgyujtest es feldologzast
-
-Adatgyujtes:
-- percenkent lefut 
-- vesz adatot
-- db szam novel
-- sum = sum + vett adat – ossze szenzorra
-- megnezi, hogy eltelt-e 5 perc (konstansbol jojjon)
-- ha eltelt, akkor kiirja a min/max/avg-t a megfelelo csv-be (=datayyyymmdd.csv)
-- "nullazza" a valtozokat
-
-
-Feldologzast
-- kell egy 24 elemu tomb, amibe a megfelelo kapott ertekeket rakjuk (maybe struct...)
-- a parameterbol jovo datumnak megfelelo csv megnyitasa
-- vegig olvasas, soronkent
-- sor feldolgozas, min, max avg kinyeres, es a tombbe bele
-
-
-Kiiras
-- ha megvan a tomb, akkor irjuk ki
-*/
-
 void getData()
 {
 	if (collectedData.time == Clock.getMinute())
@@ -260,7 +199,7 @@ void getData()
 
 	for (size_t i = 0; i < *(&sensors + 1) - sensors; i++)
 	{
-		sensors[i].Irms = random(350); // * sensors[i].emon.calcIrms(1480);
+		sensors[i].Irms = random(350) / i; // * sensors[i].emon.calcIrms(1480);
 
 		collectedData.min = sensors[i].Irms < collectedData.min ? sensors[i].Irms : collectedData.min;
 		collectedData.max = sensors[i].Irms > collectedData.max ? sensors[i].Irms : collectedData.max;
@@ -270,7 +209,6 @@ void getData()
 	if (collectedData.cnt == 5)
 	{
 		writeDataToCSV(collectedData.min, collectedData.max, collectedData.sum / collectedData.cnt);
-		Serial.println("5 perc eltelt, és az adatok ki lettek írva a CSV-be.");
 
 		collectedData.min = AMPERAGE_MAX;
 		collectedData.max = 0;
@@ -279,57 +217,70 @@ void getData()
 	}
 
 	collectedData.cnt++;
-
-	Serial.println("getData function lefutott.");
+	Serial.println("Got data.");
 }
-
-// * 0020.10.08. 13:07,0000,0000,0000
 
 void setData()
 {
-	File file = SPIFFS.open(getDataFileName());
-	if (!file)
+	struct HourlyData
+	{
+		String ptr = "";
+		int min = AMPERAGE_MAX;
+		int max, avg, time, cnt = 1;
+	} tmp;
+
+	File dataFile = SPIFFS.open(getDataFileName());
+	if (!dataFile)
 		return;
 
-	while (file.available())
+	while (dataFile.available())
 	{
-		char fileRead = file.read();
+		char fileRead = dataFile.read();
 
 		if (fileRead == '\n')
 		{
-			tmp.min = tmp.ptr.substring(18, 22).toInt() < tmp.min ? tmp.ptr.substring(18, 22).toInt() : tmp.min;
-			tmp.max = tmp.ptr.substring(23, 27).toInt() > tmp.max ? tmp.ptr.substring(23, 27).toInt() : tmp.max;
-			tmp.avg = round(tmp.ptr.substring(28, 32).toInt() / tmp.cnt);
-			tmp.cnt++;
+			// * 0020.10.08. 13:07,0000,0000,0000
 
-			if (tmp.time != tmp.ptr.substring(12, 14).toInt())
+			if (tmp.time == tmp.ptr.substring(12, 14).toInt())
 			{
+				tmp.min = tmp.ptr.substring(18, 22).toInt() < tmp.min ? tmp.ptr.substring(18, 22).toInt() : tmp.min;
+				tmp.max = tmp.ptr.substring(23, 27).toInt() > tmp.max ? tmp.ptr.substring(23, 27).toInt() : tmp.max;
+				tmp.avg = round(tmp.ptr.substring(28, 32).toInt() / tmp.cnt);
+				tmp.cnt++;
+				tmp.ptr = "";
+			}
+			else
+			{
+				processedData[tmp.ptr.substring(12, 14).toInt()].min = tmp.min;
+				processedData[tmp.ptr.substring(12, 14).toInt()].max = tmp.max;
+				processedData[tmp.ptr.substring(12, 14).toInt()].avg = tmp.avg;
 				tmp.time = tmp.ptr.substring(12, 14).toInt();
 
-				String x;
-				x += "20";
-				x += tmp.ptr.substring(2, 4);
-				x += tmp.ptr.substring(5, 7);
-				x += tmp.ptr.substring(8, 10);
-
-				if (x.toInt() == displayDate)
-				{
-					processedData[tmp.ptr.substring(12, 13).toInt()].min = tmp.min;
-					processedData[tmp.ptr.substring(12, 13).toInt()].max = tmp.max;
-					processedData[tmp.ptr.substring(12, 13).toInt()].avg = tmp.avg;
-
-					tmp.min = AMPERAGE_MAX;
-					tmp.max = 0;
-					tmp.avg = 0;
-					tmp.cnt = 1;
-				}
+				Serial.println("--- SET DATA DEBUG ---");
+				Serial.print("Index: ");
+				Serial.println(tmp.ptr.substring(12, 14));
+				Serial.print("Minimum: ");
+				Serial.println(tmp.min);
+				Serial.print("Maximum: ");
+				Serial.println(tmp.max);
+				Serial.print("Average: ");
+				Serial.println(tmp.avg);
 			}
-
-			tmp.ptr = "";
 		}
 		else
 			tmp.ptr += fileRead;
 	}
+
+	Serial.println("Data set.");
+}
+
+String getDataFileName()
+{
+	String fileName = "/";
+	fileName += displayDate;
+	fileName += ".csv";
+
+	return fileName;
 }
 
 void writeDataToCSV(int min, int max, int avg)
@@ -341,9 +292,6 @@ void writeDataToCSV(int min, int max, int avg)
 
 	// File holder for the main data file.
 	File file = SPIFFS.open(getDataFileName(), FILE_APPEND);
-
-	Serial.print("File name:");
-	Serial.println(getDataFileName());
 
 	if (!file)
 	{
@@ -369,53 +317,66 @@ void writeDataToCSV(int min, int max, int avg)
 	file.close();
 }
 
-// Creates a bar from the CSS styling.
-String createBar(int value, String classIndex, int devider)
+String fileToString(const char *path)
 {
-	// Pointer
-	String ptr;
+	File file = SPIFFS.open(path);
+	if (!file)
+	{
+		Serial.println("Failed to open file. (File to String)");
+		return "";
+	}
 
-	// Class naming
-	ptr += "<div class='bar";
-	ptr += classIndex;
-	ptr += "' style='--bar-value:";
+	String output = "";
+	while (file.available())
+	{
+		char fileRead = file.read();
+		output += fileRead;
+	}
 
-	// Display value
-	ptr += String(value / devider);
-	ptr += "%;' data-name='";
-
-	// Time
-	ptr += ptr.substring(12, 14);
-	ptr += "h' title='";
-
-	// Raw value
-	ptr += String(value);
-	ptr += "'></div>";
-
-	return ptr;
+	return output;
 }
 
 void generateChart(File html)
 {
-	File file = SPIFFS.open(getDataFileName());
-	if (!file)
-		return;
-
-	String ptr;
-
 	for (size_t i = 0; i < *(&processedData + 1) - processedData; i++)
 	{
-		char fileRead = file.read();
+		processedData[i].min = processedData[i].min == 0 ? 1 : processedData[i].min;
+		processedData[i].max = processedData[i].max == 0 ? 1 : processedData[i].max;
+		processedData[i].avg = processedData[i].avg == 0 ? 1 : processedData[i].avg;
 
-		if (fileRead == '\n')
-		{
-			html.print(createBar(processedData[i].max, "1", 12));
-			html.print(createBar(processedData[i].avg, "2", processedData[i].max * 100));
-			html.print(createBar(processedData[i].min, "3", processedData[i].avg * 100));
-			ptr = "";
-		}
-		else
-			ptr += fileRead;
+		Serial.println("--- WRITING DATA ---");
+		Serial.print("Minimum: ");
+		Serial.println(processedData[i].min);
+		Serial.print("Maximum: ");
+		Serial.println(processedData[i].max);
+		Serial.print("Average: ");
+		Serial.println(processedData[i].avg);
+
+		html.print("<div class='bar' style='--bar-value:");
+		html.print(round(processedData[i].max / 12));
+		html.print("%;' data-name='");
+		html.print(i);
+		html.print("h' title='");
+		html.print(String(processedData[i].max));
+		html.print("'>");
+
+		html.print("<div class='bar2' style='--bar-value:");
+		html.print(round(processedData[i].avg / processedData[i].max));
+		html.print("%;' data-name='");
+		html.print(i);
+		html.print("h' title='");
+		html.print(String(processedData[i].avg));
+		html.print("'>");
+
+		html.print("<div class='bar3' style='--bar-value:");
+		html.print(round(processedData[i].min / processedData[i].avg));
+		html.print("%;' data-name='");
+		html.print(i);
+		html.print("h' title='");
+		html.print(String(processedData[i].min));
+		html.print("'>");
+
+		html.print("</div></div></div>");
 	}
 }
 
