@@ -1,86 +1,90 @@
 .chart-wrap {
-    margin-left: 50px;
-    font-family: sans-serif;
-    height: 1000px;
-    width: 300px;
-  }
-  .chart-wrap .title {
-    font-weight: bold;
-    font-size: 1.62em;
-    padding: 0.5em 0 1.8em 0;
-    text-align: center;
-    white-space: nowrap;
-  }
-  .chart-wrap.vertical .grid {
-    transform: translateY(-350px) translateX(350px) rotate(-90deg);
-  }
-  .chart-wrap.vertical .grid .bar::after {
-    display: block;
-  }
-  .chart-wrap.vertical .grid::before,
-  .chart-wrap.vertical .grid::after {
-    transform: translateX(-0.2em) rotate(90deg);
-  }
-  .chart-wrap .grid {
-    position: relative;
-    padding: 5px 0 5px 0;
-    height: 100%;
-    width: 100%;
-    border-left: 2px solid #aaa;
-    background: repeating-linear-gradient(90deg, transparent, transparent 19.5%, rgba(170, 170, 170, 0.7) 20%);
-  }
-  .chart-wrap .grid::before {
-    font-size: 0.8em;
-    font-weight: bold;
-    content: "0%";
-    position: absolute;
-    left: -0.5em;
-    top: -1.5em;
-  }
-  .chart-wrap .grid::after {
-    font-size: 0.8em;
-    font-weight: bold;
-    content: "1200A";
-    position: absolute;
-    right: -1.5em;
-    top: -1.5em;
-  }
-  .chart-wrap .bar1 {
-    width: var(--bar-value);
-    height: 30px;
-    margin: 10px 0;
-    background-color: #e87e5a;
-    border-radius: 0 3px 3px 0;
-  }
-  .chart-wrap .bar:hover {
-    opacity: 0.7;
-  }
-  .chart-wrap .bar::after {
-    transform: translateY(-170%) translateX(-50px) rotate(0deg);
-    content: attr(data-name);
-    margin-left: 0%;
-    padding: 0px;
-    display: inline;
-    white-space: nowrap;
-  }
-  .chart-wrap .bar2 {
-    width: var(--bar-value);
-    height: 25px;
-    margin: 10px 0;
-    background-color: #2d789c;
-    border-radius: 0 3px 3px 0;
-  }
-  .chart-wrap .bar3 {
-    width: var(--bar-value);
-    height: 20px;
-    margin: 10px 0;
-    background-color: #e8bb2c;
-    border-radius: 0 3px 3px 0;
-  }
-
+  margin-left: 50px;
+  font-family: sans-serif;
+  height: 1000px;
+  width: 300px;
+}
+.chart-wrap .title {
+  font-weight: bold;
+  font-size: 1.62em;
+  padding: 0.5em 0 1.8em 0;
+  text-align: center;
+  white-space: nowrap;
+}
+.chart-wrap.vertical .grid {
+  transform: translateY(-350px) translateX(350px) rotate(-90deg);
+}
+.chart-wrap.vertical .grid .bar::after {
+  display: block;
+}
+.chart-wrap.vertical .grid::before,
+.chart-wrap.vertical .grid::after {
+  transform: translateX(-0.2em) rotate(90deg);
+}
+.chart-wrap .grid {
+  position: relative;
+  padding: 5px 0 5px 0;
+  height: 100%;
+  width: 100%;
+  border-left: 2px solid #aaa;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 19.5%,
+    rgba(170, 170, 170, 0.7) 20%
+  );
+}
+.chart-wrap .grid::before {
+  font-size: 0.8em;
+  font-weight: bold;
+  content: "0%";
+  position: absolute;
+  left: -0.5em;
+  top: -1.5em;
+}
+.chart-wrap .grid::after {
+  font-size: 0.8em;
+  font-weight: bold;
+  content: "1200A";
+  position: absolute;
+  right: -1.5em;
+  top: -1.5em;
+}
+.chart-wrap .bar1 {
+  width: var(--bar-value);
+  height: 30px;
+  margin: 10px 0;
+  background-color: #e87e5a;
+  border-radius: 0 3px 3px 0;
+}
+.chart-wrap .bar:hover {
+  opacity: 0.7;
+}
+.chart-wrap .bar::after {
+  transform: translateY(-170%) translateX(-50px) rotate(0deg);
+  content: attr(data-name);
+  margin-left: 0%;
+  padding: 0px;
+  display: inline;
+  white-space: nowrap;
+}
+.chart-wrap .bar2 {
+  width: var(--bar-value);
+  height: 25px;
+  margin: 10px 0;
+  background-color: #2d789c;
+  border-radius: 0 3px 3px 0;
+}
+.chart-wrap .bar3 {
+  width: var(--bar-value);
+  height: 20px;
+  margin: 10px 0;
+  background-color: #e8bb2c;
+  border-radius: 0 3px 3px 0;
+}
 
 .button {
-  background-color: #F16335;
+  background-color: #f16335;
   border: none;
   color: white;
   padding: 20px;
@@ -91,18 +95,19 @@
   margin: 4px 2px;
 }
 
-.button1 {border-radius: 3px;}
+.button1 {
+  border-radius: 3px;
+}
 
 .button2 {
-    background-color: #2d789c;
-    border: none;
-    color: white;
-    padding: 20px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 16px;
-    margin: 4px 2px;
-    border-radius: 3px;
-  }
-  
+  background-color: #2d789c;
+  border: none;
+  color: white;
+  padding: 20px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  margin: 4px 2px;
+  border-radius: 3px;
+}
