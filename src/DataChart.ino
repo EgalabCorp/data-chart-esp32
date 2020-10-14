@@ -369,6 +369,30 @@ void writeDataToCSV(int min, int max, int avg)
 	file.close();
 }
 
+// Creates a bar from the CSS styling.
+String createBar(int value, String classIndex, int devider)
+{
+	// Pointer
+	String ptr;
+
+	// Class naming
+	ptr += "<div class='bar";
+	ptr += classIndex;
+	ptr += "' style='--bar-value:";
+
+	// Display value
+	ptr += String(value / devider);
+	ptr += "%;' data-name='";
+
+	// Time
+	ptr += ptr.substring(12, 14);
+	ptr += "h' title='";
+
+	// Raw value
+	ptr += String(value);
+	ptr += "'>";
+}
+
 void generateChart(File html)
 {
 	File file = SPIFFS.open(getDataFileName());
@@ -383,28 +407,9 @@ void generateChart(File html)
 
 		if (fileRead == '\n')
 		{
-			html.print("<div class='bar' style='--bar-value:");
-			html.print(round(processedData[i].max / 12));
-			html.print("%;' data-name='");
-			html.print(ptr.substring(12, 14));
-			html.print("h' title='");
-			html.print(String(processedData[i].max));
-			html.print("'>");
-			html.print("<div class='bar2' style='--bar-value:");
-			html.print(round(processedData[i].avg / processedData[i].max * 100));
-			html.print("%;' data-name='");
-			html.print(ptr.substring(12, 14));
-			html.print("h' title='");
-			html.print(String(processedData[i].avg));
-			html.print("'>");
-			html.print("<div class='bar3' style='--bar-value:");
-			html.print(round(processedData[i].min / processedData[i].avg * 100));
-			html.print("%;' data-name='");
-			html.print(ptr.substring(12, 14));
-			html.print("h' title='");
-			html.print(String(processedData[i].min));
-			html.print("'>");
-			html.print("</div></div></div>");
+			createBar(processedData[i].max, "1", 12);
+			createBar(processedData[i].avg, "2", processedData[i].max * 100);
+			createBar(processedData[i].min, "3", processedData[i].avg * 100);
 			ptr = "";
 		}
 		else

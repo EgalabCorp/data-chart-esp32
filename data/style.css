@@ -45,7 +45,7 @@
     right: -1.5em;
     top: -1.5em;
   }
-  .chart-wrap .bar {
+  .chart-wrap .bar1 {
     width: var(--bar-value);
     height: 30px;
     margin: 10px 0;
