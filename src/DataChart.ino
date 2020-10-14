@@ -390,7 +390,9 @@ String createBar(int value, String classIndex, int devider)
 
 	// Raw value
 	ptr += String(value);
-	ptr += "'>";
+	ptr += "'></div>";
+
+	return ptr;
 }
 
 void generateChart(File html)
@@ -407,9 +409,9 @@ void generateChart(File html)
 
 		if (fileRead == '\n')
 		{
-			createBar(processedData[i].max, "1", 12);
-			createBar(processedData[i].avg, "2", processedData[i].max * 100);
-			createBar(processedData[i].min, "3", processedData[i].avg * 100);
+			html.print(createBar(processedData[i].max, "1", 12));
+			html.print(createBar(processedData[i].avg, "2", processedData[i].max * 100));
+			html.print(createBar(processedData[i].min, "3", processedData[i].avg * 100));
 			ptr = "";
 		}
 		else
