@@ -133,9 +133,12 @@ void networkInit()
 		}
 	}
 
-	Serial.println(WiFi.localIP());
-	server.on("/", handleToday);
+	if (WiFi.status() == WL_CONNECTED)
+		Serial.println(WiFi.localIP());
+	else
+		Serial.println(WiFi.softAPIP());
 
+	server.on("/", handleToday);
 	server.on("/next", handleNextDay);
 	server.on("/prev", handlePrevDay);
 
@@ -199,7 +202,7 @@ void getData()
 
 	for (size_t i = 0; i < *(&sensors + 1) - sensors; i++)
 	{
-		sensors[i].Irms = random(350) / i; // * sensors[i].emon.calcIrms(1480);
+		sensors[i].Irms = random(1, 350); // * sensors[i].emon.calcIrms(1480);
 
 		collectedData.min = sensors[i].Irms < collectedData.min ? sensors[i].Irms : collectedData.min;
 		collectedData.max = sensors[i].Irms > collectedData.max ? sensors[i].Irms : collectedData.max;
@@ -254,7 +257,6 @@ void setData()
 				processedData[tmp.ptr.substring(12, 14).toInt()].min = tmp.min;
 				processedData[tmp.ptr.substring(12, 14).toInt()].max = tmp.max;
 				processedData[tmp.ptr.substring(12, 14).toInt()].avg = tmp.avg;
-				tmp.time = tmp.ptr.substring(12, 14).toInt();
 
 				Serial.println("--- SET DATA DEBUG ---");
 				Serial.print("Index: ");
@@ -265,6 +267,12 @@ void setData()
 				Serial.println(tmp.max);
 				Serial.print("Average: ");
 				Serial.println(tmp.avg);
+
+				tmp.time = tmp.ptr.substring(12, 14).toInt();
+				tmp.min = AMPERAGE_MAX;
+				tmp.max = 0;
+				tmp.avg = 0;
+				tmp.cnt = 1;
 			}
 		}
 		else
