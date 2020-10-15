@@ -254,11 +254,6 @@ void setData()
 				processedData[tmp.ptr.substring(12, 14).toInt()].min = tmp.min;
 				processedData[tmp.ptr.substring(12, 14).toInt()].max = tmp.max;
 				processedData[tmp.ptr.substring(12, 14).toInt()].avg = tmp.avg;
-
-				Serial.println("---");
-				Serial.println(tmp.min);
-				Serial.println(tmp.max);
-				Serial.println(tmp.avg);
 			}
 			else
 			{
@@ -403,13 +398,16 @@ void makeBody(File file)
 	file.print("<div class='chart-wrap vertical'><div class='grid'>");
 	generateChart(file);
 	file.print("</br></br></br></br></br>");
-	file.print("<table width='1000px' border=0>");
-	file.print("<tr><td align=center width=33%><button onclick=\"location.href='/'\" class='button button1'>Mai nap</button></td>");
-	file.print("<td width=33%><button onclick=\"location.href='/prev'\" class='button button1'>Elozo</button></td>");
-	file.print("<td width=33%><button onclick=\"location.href='/next'\" class='button button1'>Kovetkezo</button></td>");
-	file.print("</tr><tr><td align=center width=33%><button onclick=\"location.href='/data'\" class='button2'>data</button></td>");
-	file.print("<td>&nbsp;</td><td>&nbsp;</td></tr>");
-	file.print("</table>");
+
+
+	file.print("<div class=\"footr\">");
+	file.print("<button onclick=\"location.href='/prev'\" class='button button1' style=\"transform: translateX(70px);\">Elozo</button>");
+	file.print("<button onclick=\"location.href='/'\" class='button button1' style=\"transform: translateX(120px);\">Mai nap</button>");
+	file.print("<button onclick=\"location.href='/next'\" class='button button1' style=\"transform: translateX(170px);\">Kovetkezo</button>");
+	file.print("<button onclick=\"location.href='/data'\" class='button2' style=\"transform: translateX(400px);\">data</button>");
+	file.print("</div>");
+
+
 	file.print("</body>");
 }
 

@@ -111,3 +111,11 @@
   margin: 4px 2px;
   border-radius: 3px;
 }
+
+.footr {
+  transform: translateY(-550px) translateX(0px) rotate(0deg);
+  width : 1000px;
+  display: block;
+}
+
+
