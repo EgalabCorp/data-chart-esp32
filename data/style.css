@@ -1,8 +1,8 @@
 .chart-wrap {
-  margin-left: 50px;
+  margin-left: 0px;
   font-family: sans-serif;
   height: 1000px;
-  width: 300px;
+  width: 400px;
 }
 .chart-wrap .title {
   font-weight: bold;
@@ -12,7 +12,7 @@
   white-space: nowrap;
 }
 .chart-wrap.vertical .grid {
-  transform: translateY(-350px) translateX(350px) rotate(-90deg);
+  transform: translateY(-250px) translateX(350px) rotate(-90deg);
 }
 .chart-wrap.vertical .grid .bar::after {
   display: block;
@@ -50,23 +50,23 @@
   right: -1.5em;
   top: -1.5em;
 }
-.chart-wrap .bar:hover {
-  opacity: 0.7;
-}
-.chart-wrap .bar::after {
-  transform: translateY(-170%) translateX(-50px) rotate(0deg);
-  content: attr(data-name);
-  margin-left: 0%;
-  padding: 0px;
-  display: inline;
-  white-space: nowrap;
-}
 .chart-wrap .bar1 {
   width: var(--bar-value);
   height: 30px;
   margin: 10px 0;
   background-color: #e87e5a;
   border-radius: 0 3px 3px 0;
+}
+.chart-wrap .bar:hover {
+  opacity: 0.7;
+}
+.chart-wrap .bar::after {
+  transform: translateY(-170%) translateX(-50px) rotate(0deg);
+  content: "wwwww";
+  margin-left: 0%;
+  padding: 0px;
+  display: inline;
+  white-space: nowrap;
 }
 .chart-wrap .bar2 {
   width: var(--bar-value);
@@ -97,6 +97,7 @@
 
 .button1 {
   border-radius: 3px;
+  width: 120px;
 }
 
 .button2 {
@@ -110,12 +111,22 @@
   font-size: 16px;
   margin: 4px 2px;
   border-radius: 3px;
+  width: 120px;
+
 }
 
 .footr {
-  transform: translateY(-550px) translateX(0px) rotate(0deg);
-  width : 1000px;
-  display: block;
+  	transform: translateY(-500px) translateX(0px) rotate(0deg);
+ 	width : 1000px;
+  	display: block;
+}
+
+
+.h1 {
+  margin-left: 10px; 
+  font-family: sans-serif; 
+  font-size: 25px; 
+  font-weight: bold;
 }
 
 
