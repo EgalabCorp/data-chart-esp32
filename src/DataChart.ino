@@ -97,9 +97,18 @@ void handleNextDay()
 	handleOnConnect();
 }
 
+
+void handleDump ()
+{
+	Serial.println("CSV Dump");
+	streamFile(getDataFileName().c_str(),"");  // text/csv
+
+}	
+
 void networkInit()
 {
-	const char *WIFI_SSID = "KT Partners";
+	// const char *WIFI_SSID = "KT Partners";
+	const char *WIFI_SSID = "balage_tp_24g";
 	const char *WIFI_PASSWORD = "felavilagtetejeremama";
 
 	Serial.println("Initializing network...");
@@ -141,6 +150,7 @@ void networkInit()
 	server.on("/", handleToday);
 	server.on("/next", handleNextDay);
 	server.on("/prev", handlePrevDay);
+	server.on("/data", handleDump);
 
 	server.onNotFound(handleNotFound);
 	server.begin();
@@ -183,15 +193,25 @@ void setDisplayDate(int date)
 
 void getPreviousDate()
 {
-	for (size_t i = displayDate - 1; i > 20201008; i--)
-		setDisplayDate(i);
+
+// ez nem jo igy, nem talalja meg az elozo napot
+//	for (size_t i = displayDate - 1; i > 20201008; i--)
+//		setDisplayDate(i);
+
+		setDisplayDate(20201015);
+
 }
 
 void getNextDate()
 {
+
+	// ez nem jo igy, nem talalja meg a kovetkezo napot
+
 	for (size_t i = displayDate + 1; i < getCurrentDate(); i++)
 		setDisplayDate(i);
 }
+
+
 
 void getData()
 {
@@ -225,12 +245,19 @@ void getData()
 
 void setData()
 {
+	
+	// nullázni kell a processData tombot elotte
+
+
 	struct HourlyData
 	{
 		String ptr = "";
 		float min = AMPERAGE_MAX;
 		float max, avg, time, cnt = 1;
 	} tmp;
+
+	Serial.println("SetData");
+	Serial.println(getDataFileName());
 
 	File dataFile = SPIFFS.open(getDataFileName());
 	if (!dataFile)
@@ -281,6 +308,18 @@ String getDataFileName()
 
 	return fileName;
 }
+
+String getDataFileName2()
+{
+
+	// kell egy olyan is, ami az irando file nevet adja vissza
+	String fileName = "/";
+	fileName += getCurrentDate();  // aktualis datum kell, nem a displaydate
+	fileName += ".csv";
+
+	return fileName;
+}
+
 
 void writeDataToCSV(int min, int max, int avg)
 {
@@ -384,29 +423,40 @@ void makeHead(File file)
 // Makes the chart for in the body.
 void makeBody(File file)
 {
+	Serial.println("displayDate");
+	Serial.println(displayDate);
+
 	file.print("<body>");
 	file.print("<table class='graph'>");
-	file.print("<caption>");
-	file.print("20");
-	file.print(String(Clock.getYear()));
-	file.print(". ");
-	file.print(String(Clock.getMonth(timeClock.century)));
-	file.print(". ");
-	file.print(String(Clock.getDate()));
+	file.print("<h1 style=\"margin-left: 10px; font-family: sans-serif; font-size: 25px; font-weight: bold;\">");
+//	file.print("<h1>");
+	
+//	file.print("20");
+//	file.print(String(Clock.getYear()));
+	file.print(displayDate);
+//	file.print(". ");
+//	file.print(String(Clock.getMonth(timeClock.century)));
+//	file.print(". ");
+//	file.print(String(Clock.getDate()));
 	file.print(".");
-	file.print("</caption>");
+	file.print("</h1>");
 	file.print("<div class='chart-wrap vertical'><div class='grid'>");
-	generateChart(file);
-	file.print("</br></br></br></br></br>");
 
 
+// displayDate-nek megfelelo chart-ot kell visszaadni - ha minden igaz az jon, csak tesztelni kell...
+// nem az jon...
+
+	generateChart(file); 
+
+	file.print("</div>");
 	file.print("<div class=\"footr\">");
-	file.print("<button onclick=\"location.href='/prev'\" class='button button1' style=\"transform: translateX(70px);\">Elozo</button>");
-	file.print("<button onclick=\"location.href='/'\" class='button button1' style=\"transform: translateX(120px);\">Mai nap</button>");
-	file.print("<button onclick=\"location.href='/next'\" class='button button1' style=\"transform: translateX(170px);\">Kovetkezo</button>");
-	file.print("<button onclick=\"location.href='/data'\" class='button2' style=\"transform: translateX(400px);\">data</button>");
+	file.print("<button onclick=\"location.href='/prev'\" class='button button1' style=\"transform: translateX(20px);\">Elozo</button>");
+	file.print("<button onclick=\"location.href='/'\" class='button button1' style=\"transform: translateX(70px);\">Mai nap</button>");
+	file.print("<button onclick=\"location.href='/next'\" class='button button1' style=\"transform: translateX(120px);\">Kovetkezo</button>");
+	file.print("<button onclick=\"location.href='/data'\" class='button2' style=\"transform: translateX(550px);\">Data</button>");
 	file.print("</div>");
 
+	file.print("</div></div>");
 
 	file.print("</body>");
 }
