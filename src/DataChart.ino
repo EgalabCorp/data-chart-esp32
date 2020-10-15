@@ -6,7 +6,7 @@
 #include <Wire.h>
 
 // Ezzel könnyebb lesz majd állítani a maximum áramerősséget.
-#define AMPERAGE_MAX 1200
+#define AMPERAGE_MAX 1050
 
 // The date responsible for the file naming which is holding the data.
 int displayDate;
@@ -30,12 +30,12 @@ struct Sensor
 
 struct CollectedData
 {
-	int min, max, sum, cnt, time;
+	float min, max, sum, cnt, time;
 } collectedData;
 
 struct ProcessedData
 {
-	int min, max, avg;
+	float min, max, avg;
 } processedData[24];
 
 int getCurrentDate()
@@ -228,8 +228,8 @@ void setData()
 	struct HourlyData
 	{
 		String ptr = "";
-		int min = AMPERAGE_MAX;
-		int max, avg, time, cnt = 1;
+		float min = AMPERAGE_MAX;
+		float max, avg, time, cnt = 1;
 	} tmp;
 
 	File dataFile = SPIFFS.open(getDataFileName());
@@ -250,30 +250,26 @@ void setData()
 				tmp.max = tmp.ptr.substring(23, 27).toInt() > tmp.max ? tmp.ptr.substring(23, 27).toInt() : tmp.max;
 				tmp.avg = round(tmp.ptr.substring(28, 32).toInt() / tmp.cnt);
 				tmp.cnt++;
-				tmp.ptr = "";
-			}
-			else
-			{
+
 				processedData[tmp.ptr.substring(12, 14).toInt()].min = tmp.min;
 				processedData[tmp.ptr.substring(12, 14).toInt()].max = tmp.max;
 				processedData[tmp.ptr.substring(12, 14).toInt()].avg = tmp.avg;
 
-				Serial.println("--- SET DATA DEBUG ---");
-				Serial.print("Index: ");
-				Serial.println(tmp.ptr.substring(12, 14));
-				Serial.print("Minimum: ");
+				Serial.println("---");
 				Serial.println(tmp.min);
-				Serial.print("Maximum: ");
 				Serial.println(tmp.max);
-				Serial.print("Average: ");
 				Serial.println(tmp.avg);
-
+			}
+			else
+			{
 				tmp.time = tmp.ptr.substring(12, 14).toInt();
 				tmp.min = AMPERAGE_MAX;
 				tmp.max = 0;
 				tmp.avg = 0;
 				tmp.cnt = 1;
 			}
+
+			tmp.ptr = "";
 		}
 		else
 			tmp.ptr += fileRead;
@@ -352,16 +348,8 @@ void generateChart(File html)
 		processedData[i].max = processedData[i].max == 0 ? 1 : processedData[i].max;
 		processedData[i].avg = processedData[i].avg == 0 ? 1 : processedData[i].avg;
 
-		Serial.println("--- WRITING DATA ---");
-		Serial.print("Minimum: ");
-		Serial.println(processedData[i].min);
-		Serial.print("Maximum: ");
-		Serial.println(processedData[i].max);
-		Serial.print("Average: ");
-		Serial.println(processedData[i].avg);
-
-		html.print("<div class='bar' style='--bar-value:");
-		html.print(round(processedData[i].max / 12));
+		html.print("<div class='bar1' style='--bar-value:");
+		html.print(round(processedData[i].max / 1050 * 100));
 		html.print("%;' data-name='");
 		html.print(i);
 		html.print("h' title='");
@@ -369,7 +357,7 @@ void generateChart(File html)
 		html.print("'>");
 
 		html.print("<div class='bar2' style='--bar-value:");
-		html.print(round(processedData[i].avg / processedData[i].max));
+		html.print(round(processedData[i].avg / processedData[i].max * 100));
 		html.print("%;' data-name='");
 		html.print(i);
 		html.print("h' title='");
@@ -377,7 +365,7 @@ void generateChart(File html)
 		html.print("'>");
 
 		html.print("<div class='bar3' style='--bar-value:");
-		html.print(round(processedData[i].min / processedData[i].avg));
+		html.print(round(processedData[i].min / processedData[i].avg * 100));
 		html.print("%;' data-name='");
 		html.print(i);
 		html.print("h' title='");
