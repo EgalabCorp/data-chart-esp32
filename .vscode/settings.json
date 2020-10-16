@@ -5,6 +5,7 @@
         "algorithm": "cpp",
         "istream": "cpp",
         "limits": "cpp",
-        "streambuf": "cpp"
+        "streambuf": "cpp",
+        "ctime": "cpp"
     }
 }
