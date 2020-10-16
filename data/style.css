@@ -37,7 +37,7 @@
 .chart-wrap .grid::before {
   font-size: 0.8em;
   font-weight: bold;
-  content: "0%";
+  content: "0A";
   position: absolute;
   left: -0.5em;
   top: -1.5em;
