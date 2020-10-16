@@ -233,7 +233,7 @@ void getData()
 	}
 
 	collectedData.cnt++;
-	Serial.println("Got data.");
+	Serial.println("Gotten data by the minute.");
 }
 
 void setData()
@@ -279,7 +279,7 @@ void setData()
 			tmp.ptr += fileRead;
 	}
 
-	Serial.println("Data set.");
+	Serial.println("Data has been set.");
 }
 
 String getDataFileName()
@@ -393,9 +393,6 @@ void makeHead(File htmlFile)
 // Makes the chart for in the body.
 void makeBody(File htmlFile)
 {
-	Serial.println("displayDate");
-	Serial.println(displayDate);
-
 	htmlFile.print("<body>");
 	htmlFile.print("<table class='graph'>");
 	htmlFile.print("<h1 style=\"margin-left: 10px; font-family: sans-serif; font-size: 25px; font-weight: bold;\">");
