@@ -1,3 +1,4 @@
+#include <ArduinoOTA.h>
 #include <DS3231.h>
 #include <EmonLib.h>
 #include <SPIFFS.h>
@@ -51,8 +52,8 @@ void handleOnConnect()
 {
 	Serial.println("Connection handling called.");
 
-	setData();							   // Aligns the data for the HTML page.
-	makePage();							   // Making HTML page.
+	setData();								// Aligns the data for the HTML page.
+	makePage();								// Making HTML page.
 	streamFile("/index.html", "text/html"); // Streaming HTML.
 }
 
@@ -450,6 +451,34 @@ void makePage()
 	htmlFile.close();
 }
 
+void OtaInit()
+{
+	ArduinoOTA.onStart([]() {
+		Serial.println("Start");
+	});
+	ArduinoOTA.onEnd([]() {
+		Serial.println("\nEnd");
+	});
+	ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+		Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+	});
+	ArduinoOTA.onError([](ota_error_t error) {
+		Serial.printf("Error[%u]: ", error);
+		if (error == OTA_AUTH_ERROR)
+			Serial.println("Auth Failed");
+		else if (error == OTA_BEGIN_ERROR)
+			Serial.println("Begin Failed");
+		else if (error == OTA_CONNECT_ERROR)
+			Serial.println("Connect Failed");
+		else if (error == OTA_RECEIVE_ERROR)
+			Serial.println("Receive Failed");
+		else if (error == OTA_END_ERROR)
+			Serial.println("End Failed");
+	});
+	ArduinoOTA.begin();
+	Serial.println("Ota is now ready.");
+}
+
 // Init
 void setup()
 {
@@ -462,6 +491,7 @@ void setup()
 
 	networkInit();
 	timeInit();
+	OtaInit();
 
 	sensors[0].emon.current(32, 10);
 	sensors[1].emon.current(33, 10);
@@ -472,5 +502,6 @@ void setup()
 void loop()
 {
 	server.handleClient();
+	ArduinoOTA.handle();
 	getData();
 }
