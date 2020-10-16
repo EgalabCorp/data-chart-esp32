@@ -178,32 +178,44 @@ void timeInit()
 	displayDate = getCurrentDate();
 }
 
-void checkFileExist(int date)
-{
-	File file = SPIFFS.open(getDataFileName(), FILE_READ);
-
-	// * Debugging
-	Serial.print("Looking for file: ");
-	Serial.println(getDataFileName());
-
-	if (file)
-	{
-		displayDate = date;
-		Serial.print("File found: ");
-		Serial.println(getDataFileName());
-	}
-}
-
 void getPreviousDate()
 {
-	for (size_t i = displayDate; i > 20201014; i--)
-		checkFileExist(i);
+	for (size_t i = displayDate - 1; i > 20201013; i--)
+	{
+		File dataFile = SPIFFS.open(getDataFileName(), FILE_READ);
+
+		// * Debugging
+		Serial.print("Looking for file: ");
+		Serial.println(getDataFileName());
+
+		if (dataFile)
+		{
+			displayDate = i;
+			Serial.print("File found: ");
+			Serial.println(getDataFileName());
+			break;
+		}
+	}
 }
 
 void getNextDate()
 {
-	for (size_t i = displayDate; i <= getCurrentDate(); i++)
-		checkFileExist(i);
+	for (size_t i = displayDate + 1; i <= getCurrentDate(); i++)
+	{
+		File dataFile = SPIFFS.open(getDataFileName(), FILE_READ);
+
+		// * Debugging
+		Serial.print("Looking for file: ");
+		Serial.println(getDataFileName());
+
+		if (dataFile)
+		{
+			displayDate = i;
+			Serial.print("File found: ");
+			Serial.println(getDataFileName());
+			break;
+		}
+	}
 }
 
 void getData()
