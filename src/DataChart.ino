@@ -51,8 +51,8 @@ void handleOnConnect()
 {
 	Serial.println("Connection handling called.");
 
-	setData();								// Aligns the data for the HTML page.
-	makePage();								// Making HTML page.
+	setData();							   // Aligns the data for the HTML page.
+	makePage();							   // Making HTML page.
 	streamFile("/index.html", "text/html"); // Streaming HTML.
 }
 
@@ -97,18 +97,16 @@ void handleNextDay()
 	handleOnConnect();
 }
 
-
-void handleDump ()
+void handleDump()
 {
 	Serial.println("CSV Dump");
-	streamFile(getDataFileName().c_str(),"");  // text/csv
-
-}	
+	streamFile(getDataFileName().c_str(), "text/plain");
+}
 
 void networkInit()
 {
 	// const char *WIFI_SSID = "KT Partners";
-	const char *WIFI_SSID = "balage_tp_24g";
+	const char *WIFI_SSID = "KT Partners";
 	const char *WIFI_PASSWORD = "felavilagtetejeremama";
 
 	Serial.println("Initializing network...");
@@ -180,38 +178,33 @@ void timeInit()
 	displayDate = getCurrentDate();
 }
 
-void setDisplayDate(int date)
+void checkFileExist(int date)
 {
 	File file = SPIFFS.open(getDataFileName(), FILE_READ);
+
+	// * Debugging
+	Serial.print("Looking for file: ");
+	Serial.println(getDataFileName());
+
 	if (file)
 	{
 		displayDate = date;
-		Serial.print("File found:");
+		Serial.print("File found: ");
 		Serial.println(getDataFileName());
 	}
 }
 
 void getPreviousDate()
 {
-
-// ez nem jo igy, nem talalja meg az elozo napot
-//	for (size_t i = displayDate - 1; i > 20201008; i--)
-//		setDisplayDate(i);
-
-		setDisplayDate(20201015);
-
+	for (size_t i = displayDate; i > 20201014; i--)
+		checkFileExist(i);
 }
 
 void getNextDate()
 {
-
-	// ez nem jo igy, nem talalja meg a kovetkezo napot
-
-	for (size_t i = displayDate + 1; i < getCurrentDate(); i++)
-		setDisplayDate(i);
+	for (size_t i = displayDate; i <= getCurrentDate(); i++)
+		checkFileExist(i);
 }
-
-
 
 void getData()
 {
@@ -245,9 +238,7 @@ void getData()
 
 void setData()
 {
-	
-	// nullázni kell a processData tombot elotte
-
+	memset(processedData, 0, sizeof(processedData));
 
 	struct HourlyData
 	{
@@ -255,9 +246,6 @@ void setData()
 		float min = AMPERAGE_MAX;
 		float max, avg, time, cnt = 1;
 	} tmp;
-
-	Serial.println("SetData");
-	Serial.println(getDataFileName());
 
 	File dataFile = SPIFFS.open(getDataFileName());
 	if (!dataFile)
@@ -283,13 +271,7 @@ void setData()
 				processedData[tmp.ptr.substring(12, 14).toInt()].avg = tmp.avg;
 			}
 			else
-			{
 				tmp.time = tmp.ptr.substring(12, 14).toInt();
-				tmp.min = AMPERAGE_MAX;
-				tmp.max = 0;
-				tmp.avg = 0;
-				tmp.cnt = 1;
-			}
 
 			tmp.ptr = "";
 		}
@@ -308,18 +290,6 @@ String getDataFileName()
 
 	return fileName;
 }
-
-String getDataFileName2()
-{
-
-	// kell egy olyan is, ami az irando file nevet adja vissza
-	String fileName = "/";
-	fileName += getCurrentDate();  // aktualis datum kell, nem a displaydate
-	fileName += ".csv";
-
-	return fileName;
-}
-
 
 void writeDataToCSV(int min, int max, int avg)
 {
@@ -411,73 +381,64 @@ void generateChart(File html)
 }
 
 // Imports the external CSS from SPIFFS.
-void makeHead(File file)
+void makeHead(File htmlFile)
 {
-	file.print("<head>");
-	file.print("<style>");
-	file.print(fileToString("/style.css"));
-	file.print("</style>");
-	file.print("</head>");
+	htmlFile.print("<head>");
+	htmlFile.print("<style>");
+	htmlFile.print(fileToString("/style.css"));
+	htmlFile.print("</style>");
+	htmlFile.print("</head>");
 }
 
 // Makes the chart for in the body.
-void makeBody(File file)
+void makeBody(File htmlFile)
 {
 	Serial.println("displayDate");
 	Serial.println(displayDate);
 
-	file.print("<body>");
-	file.print("<table class='graph'>");
-	file.print("<h1 style=\"margin-left: 10px; font-family: sans-serif; font-size: 25px; font-weight: bold;\">");
-//	file.print("<h1>");
-	
-//	file.print("20");
-//	file.print(String(Clock.getYear()));
-	file.print(displayDate);
-//	file.print(". ");
-//	file.print(String(Clock.getMonth(timeClock.century)));
-//	file.print(". ");
-//	file.print(String(Clock.getDate()));
-	file.print(".");
-	file.print("</h1>");
-	file.print("<div class='chart-wrap vertical'><div class='grid'>");
+	htmlFile.print("<body>");
+	htmlFile.print("<table class='graph'>");
+	htmlFile.print("<h1 style=\"margin-left: 10px; font-family: sans-serif; font-size: 25px; font-weight: bold;\">");
+	htmlFile.print(displayDate);
+	htmlFile.print(".");
+	htmlFile.print("</h1>");
+	htmlFile.print("<div class='chart-wrap vertical'><div class='grid'>");
 
+	generateChart(htmlFile);
 
-// displayDate-nek megfelelo chart-ot kell visszaadni - ha minden igaz az jon, csak tesztelni kell...
-// nem az jon...
+	htmlFile.print("</div>");
 
-	generateChart(file); 
+	// ! Nincsenek gombok. Bocsi :(
 
-	file.print("</div>");
-	file.print("<div class=\"footr\">");
-	file.print("<button onclick=\"location.href='/prev'\" class='button button1' style=\"transform: translateX(20px);\">Elozo</button>");
-	file.print("<button onclick=\"location.href='/'\" class='button button1' style=\"transform: translateX(70px);\">Mai nap</button>");
-	file.print("<button onclick=\"location.href='/next'\" class='button button1' style=\"transform: translateX(120px);\">Kovetkezo</button>");
-	file.print("<button onclick=\"location.href='/data'\" class='button2' style=\"transform: translateX(550px);\">Data</button>");
-	file.print("</div>");
+	htmlFile.print("<div class=\"footr\">");
+	htmlFile.print("<button onclick=\"location.href='/prev'\" class='button button1' style=\"transform: translateX(20px);\">Elozo</button>");
+	htmlFile.print("<button onclick=\"location.href='/'\" class='button button1' style=\"transform: translateX(70px);\">Mai nap</button>");
+	htmlFile.print("<button onclick=\"location.href='/next'\" class='button button1' style=\"transform: translateX(120px);\">Kovetkezo</button>");
+	htmlFile.print("<button onclick=\"location.href='/data'\" class='button2' style=\"transform: translateX(550px);\">Data</button>");
+	htmlFile.print("</div>");
 
-	file.print("</div></div>");
+	htmlFile.print("</div></div>");
 
-	file.print("</body>");
+	htmlFile.print("</body>");
 }
 
 void makePage()
 {
 	Serial.println("Attempting to make HTML page.");
 
-	File file = SPIFFS.open("/index.html", FILE_WRITE);
-	if (!file)
+	File htmlFile = SPIFFS.open("/index.html", FILE_WRITE);
+	if (!htmlFile)
 	{
 		Serial.println("Error making HTML page. (SPIFFS).");
 		return;
 	}
 
 	// Making the HTML page functionally.
-	file.print("<!DOCTYPE html>");
-	makeHead(file);
-	makeBody(file);
+	htmlFile.print("<!DOCTYPE html>");
+	makeHead(htmlFile);
+	makeBody(htmlFile);
 
-	file.close();
+	htmlFile.close();
 }
 
 // Init
