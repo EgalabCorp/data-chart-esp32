@@ -6,7 +6,7 @@
 #include <Wire.h>
 
 // Ezzel könnyebb lesz majd állítani a maximum áramerősséget.
-#define AMPERAGE_MAX 1050
+#define AMPERAGE_MAX 1200
 
 // The date responsible for the file naming which is holding the data.
 int displayDate;
@@ -363,7 +363,7 @@ void generateChart(File html)
 		processedData[i].avg = processedData[i].avg == 0 ? 1 : processedData[i].avg;
 
 		html.print("<div class='bar1' style='--bar-value:");
-		html.print(round(processedData[i].max / 1050 * 100));
+		html.print(round(processedData[i].max / 12));
 		html.print("%;' data-name='");
 		html.print(i);
 		html.print("h' title='");
