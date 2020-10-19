@@ -51,8 +51,8 @@ void handleOnConnect()
 {
 	Serial.println("Connection handling called.");
 
-	setData();							   // Aligns the data for the HTML page.
-	makePage();							   // Making HTML page.
+	setData();								// Aligns the data for the HTML page.
+	makePage();								// Making HTML page.
 	streamFile("/index.html", "text/html"); // Streaming HTML.
 }
 
@@ -105,7 +105,6 @@ void handleDump()
 
 void networkInit()
 {
-	// const char *WIFI_SSID = "KT Partners";
 	const char *WIFI_SSID = "KT Partners";
 	const char *WIFI_PASSWORD = "felavilagtetejeremama";
 
@@ -327,7 +326,6 @@ void writeDataToCSV(int min, int max, int avg)
 	dateTime.hour = Clock.getHour(timeClock.format12, timeClock.pm);
 	dateTime.minute = Clock.getMinute();
 
-	// Sor formázás
 	sprintf(dataLog, "%04d.%02d.%02d. %02d:%02d,%04d,%04d,%04d", 2000 + dateTime.year, dateTime.month, dateTime.date, dateTime.hour, dateTime.minute, min, max, avg);
 
 	if (!file.println(dataLog))
@@ -412,22 +410,14 @@ void makeBody(File htmlFile)
 	htmlFile.print(".");
 	htmlFile.print("</h1>");
 	htmlFile.print("<div class='chart-wrap vertical'><div class='grid'>");
-
 	generateChart(htmlFile);
-
 	htmlFile.print("</div>");
-
-	// ! Nincsenek gombok. Bocsi :(
-
 	htmlFile.print("<div class=\"footr\">");
 	htmlFile.print("<button onclick=\"location.href='/prev'\" class='button button1' style=\"transform: translateX(20px);\">Elozo</button>");
 	htmlFile.print("<button onclick=\"location.href='/'\" class='button button1' style=\"transform: translateX(70px);\">Mai nap</button>");
 	htmlFile.print("<button onclick=\"location.href='/next'\" class='button button1' style=\"transform: translateX(120px);\">Kovetkezo</button>");
 	htmlFile.print("<button onclick=\"location.href='/data'\" class='button2' style=\"transform: translateX(550px);\">Data</button>");
-	htmlFile.print("</div>");
-
-	htmlFile.print("</div></div>");
-
+	htmlFile.print("</div></div></div>");
 	htmlFile.print("</body>");
 }
 
