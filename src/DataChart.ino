@@ -9,101 +9,101 @@
 #define AMPERAGE_MAX 1050
 
 // The date responsible for the file naming which is holding the data.
-int display_date;
+int displayDate;
 
 // Clock hardware module.
 DS3231 Clock;
 
 // Webserver setup for networking.
-WebServer Server(80);
+WebServer server(80);
 
 struct TimeClock
 {
-	bool century, format_12, pm;
-} time_clock;
+	bool century, format12, pm;
+} timeClock;
 
 struct Sensor
 {
 	EnergyMonitor emon;
-	double irms;
+	double Irms;
 } sensors[3];
 
 struct CollectedData
 {
 	float min, max, sum, cnt, time;
-} collected_data;
+} collectedData;
 
-struct ParsableData
+struct ProcessedData
 {
 	float min, max, avg;
-} parsable_data[24];
+} processedData[24];
 
-int GetCurrentDate()
+int getCurrentDate()
 {
-	char get_date[9];
-	sprintf(get_date, "%04d%02d%02d", 2000 + Clock.getYear(), Clock.getMonth(time_clock.century), Clock.getDate());
+	char getDate[9];
+	sprintf(getDate, "%04d%02d%02d", 2000 + Clock.getYear(), Clock.getMonth(timeClock.century), Clock.getDate());
 
-	return String(get_date).toInt();
+	return String(getDate).toInt();
 }
 
 // On connect, the device would recieve the HTML data.
-void HandleOnConnect()
+void handleOnConnect()
 {
 	Serial.println("Connection handling called.");
 
-	SetCurrentDataTable();					// Aligns the data for the HTML page.
-	MakeIndexPage();						// Making HTML page.
-	StreamFile("/index.html", "text/html"); // Streaming HTML.
+	setData();							   // Aligns the data for the HTML page.
+	makePage();							   // Making HTML page.
+	streamFile("/index.html", "text/html"); // Streaming HTML.
 }
 
 // If the server was not found, the device would return 404.
-void HandleNotFound()
+void handleNotFound()
 {
 	Serial.println("Error: 404 (Not found)");
-	Server.send(404, "text/plain", "Not found");
+	server.send(404, "text/plain", "Not found");
 }
 
-void StreamFile(const char *path_to_file, String mime_type)
+void streamFile(const char *path, String mimeType)
 {
 	// Streaming the generated html file, if it exists.
-	if (SPIFFS.exists(path_to_file))
+	if (SPIFFS.exists(path))
 	{
-		File file_to_stream = SPIFFS.open(path_to_file, "r");
-		Server.streamFile(file_to_stream, mime_type);
-		file_to_stream.close();
+		File file = SPIFFS.open(path, "r");
+		server.streamFile(file, mimeType);
+		file.close();
 	}
 	else
-		HandleNotFound();
+		handleNotFound();
 }
 
-void HandleToday()
+void handleToday()
 {
 	Serial.println("Handling current day record.");
-	display_date = GetCurrentDate();
-	HandleOnConnect();
+	displayDate = getCurrentDate();
+	handleOnConnect();
 }
 
-void HandlePreviousDay()
+void handlePrevDay()
 {
 	Serial.println("Handling previous day record.");
-	GetPreviousDate();
-	HandleOnConnect();
+	getPreviousDate();
+	handleOnConnect();
 }
 
-void HandleNextDay()
+void handleNextDay()
 {
 	Serial.println("Handling next day record.");
-	GetNextDate();
-	HandleOnConnect();
+	getNextDate();
+	handleOnConnect();
 }
 
-void HandleDump()
+void handleDump()
 {
 	Serial.println("CSV Dump");
-	StreamFile(GetDataFileName().c_str(), "text/plain");
+	streamFile(getDataFileName().c_str(), "text/plain");
 }
 
-void NetworkInitialization()
+void networkInit()
 {
 	// const char *WIFI_SSID = "KT Partners";
 	const char *WIFI_SSID = "KT Partners";
@@ -145,18 +145,17 @@ void NetworkInitialization()
 	else
 		Serial.println(WiFi.softAPIP());
 
-	Server.on("/", HandleToday);
-	Server.on("/next", HandleNextDay);
-	Server.on("/prev", HandlePreviousDay);
-	Server.on("/data", HandleDump);
+	server.on("/", handleToday);
+	server.on("/next", handleNextDay);
+	server.on("/prev", handlePrevDay);
+	server.on("/data", handleDump);
 
-	Server.onNotFound(HandleNotFound);
-	Server.begin();
+	server.onNotFound(handleNotFound);
+	server.begin();
 	Serial.println("Server started.");
 }
 
-// ? Might be able to remove?
-void ClockInitialization()
+void timeInit()
 {
 	Serial.println("Initializing time...");
 
@@ -165,143 +164,143 @@ void ClockInitialization()
 		delay(1000);
 		Serial.print(Clock.getYear(), DEC);
 		Serial.print(".");
-		Serial.print(Clock.getMonth(time_clock.century), DEC);
+		Serial.print(Clock.getMonth(timeClock.century), DEC);
 		Serial.print(".");
 		Serial.print(Clock.getDate(), DEC);
 		Serial.print(". ");
-		Serial.print(Clock.getHour(time_clock.format_12, time_clock.pm), DEC);
+		Serial.print(Clock.getHour(timeClock.format12, timeClock.pm), DEC);
 		Serial.print(":");
 		Serial.print(Clock.getMinute(), DEC);
 		Serial.print(":");
 		Serial.println(Clock.getSecond(), DEC);
 	}
 
-	display_date = GetCurrentDate();
+	displayDate = getCurrentDate();
 }
 
-void GetPreviousDate()
+void getPreviousDate()
 {
-	for (size_t i = display_date - 1; i > 20201013; i--)
+	for (size_t i = displayDate - 1; i > 20201013; i--)
 	{
-		File data_file = SPIFFS.open(GetDataFileName(), FILE_READ);
+		File dataFile = SPIFFS.open(getDataFileName(), FILE_READ);
 
 		// * Debugging
 		Serial.print("Looking for file: ");
-		Serial.println(GetDataFileName());
+		Serial.println(getDataFileName());
 
-		if (data_file)
+		if (dataFile)
 		{
-			display_date = i;
+			displayDate = i;
 			Serial.print("File found: ");
-			Serial.println(GetDataFileName());
+			Serial.println(getDataFileName());
 			break;
 		}
 	}
 }
 
-void GetNextDate()
+void getNextDate()
 {
-	for (size_t i = display_date + 1; i <= GetCurrentDate(); i++)
+	for (size_t i = displayDate + 1; i <= getCurrentDate(); i++)
 	{
-		File data_file = SPIFFS.open(GetDataFileName(), FILE_READ);
+		File dataFile = SPIFFS.open(getDataFileName(), FILE_READ);
 
 		// * Debugging
 		Serial.print("Looking for file: ");
-		Serial.println(GetDataFileName());
+		Serial.println(getDataFileName());
 
-		if (data_file)
+		if (dataFile)
 		{
-			display_date = i;
+			displayDate = i;
 			Serial.print("File found: ");
-			Serial.println(GetDataFileName());
+			Serial.println(getDataFileName());
 			break;
 		}
 	}
 }
 
-void GetCurrentData()
+void getData()
 {
-	if (collected_data.time == Clock.getMinute())
+	if (collectedData.time == Clock.getMinute())
 		return;
 
-	collected_data.time = Clock.getMinute();
+	collectedData.time = Clock.getMinute();
 
 	for (size_t i = 0; i < *(&sensors + 1) - sensors; i++)
 	{
-		sensors[i].irms = random(1, 350); // * sensors[i].emon.calcIrms(1480);
+		sensors[i].Irms = random(1, 350); // * sensors[i].emon.calcIrms(1480);
 
-		collected_data.min = sensors[i].irms < collected_data.min ? sensors[i].irms : collected_data.min;
-		collected_data.max = sensors[i].irms > collected_data.max ? sensors[i].irms : collected_data.max;
-		collected_data.sum += sensors[i].irms;
+		collectedData.min = sensors[i].Irms < collectedData.min ? sensors[i].Irms : collectedData.min;
+		collectedData.max = sensors[i].Irms > collectedData.max ? sensors[i].Irms : collectedData.max;
+		collectedData.sum += sensors[i].Irms;
 	}
 
-	if (collected_data.cnt == 5)
+	if (collectedData.cnt == 5)
 	{
-		writeDataToCSV(collected_data.min, collected_data.max, collected_data.sum / collected_data.cnt);
+		writeDataToCSV(collectedData.min, collectedData.max, collectedData.sum / collectedData.cnt);
 
-		collected_data.min = AMPERAGE_MAX;
-		collected_data.max = 0;
-		collected_data.sum = 0;
-		collected_data.cnt = 0;
+		collectedData.min = AMPERAGE_MAX;
+		collectedData.max = 0;
+		collectedData.sum = 0;
+		collectedData.cnt = 0;
 	}
 
-	collected_data.cnt++;
+	collectedData.cnt++;
 	Serial.println("Gotten data by the minute.");
 }
 
-void SetCurrentDataTable()
+void setData()
 {
-	memset(parsable_data, 0, sizeof(parsable_data));
+	memset(processedData, 0, sizeof(processedData));
 
-	struct TemporaryData
+	struct HourlyData
 	{
 		String ptr = "";
 		float min = AMPERAGE_MAX;
 		float max, avg, time, cnt = 1;
-	} temporary_data;
+	} tmp;
 
-	File data_file = SPIFFS.open(GetDataFileName());
-	if (!data_file)
+	File dataFile = SPIFFS.open(getDataFileName());
+	if (!dataFile)
 		return;
 
-	while (data_file.available())
+	while (dataFile.available())
 	{
-		char fileRead = data_file.read();
+		char fileRead = dataFile.read();
 
 		if (fileRead == '\n')
 		{
 			// * 0020.10.08. 13:07,0000,0000,0000
 
-			if (temporary_data.time == temporary_data.ptr.substring(12, 14).toInt())
+			if (tmp.time == tmp.ptr.substring(12, 14).toInt())
 			{
-				temporary_data.min = temporary_data.ptr.substring(18, 22).toInt() < temporary_data.min ? temporary_data.ptr.substring(18, 22).toInt() : temporary_data.min;
-				temporary_data.max = temporary_data.ptr.substring(23, 27).toInt() > temporary_data.max ? temporary_data.ptr.substring(23, 27).toInt() : temporary_data.max;
-				temporary_data.avg = round(temporary_data.ptr.substring(28, 32).toInt() / temporary_data.cnt);
-				temporary_data.cnt++;
+				tmp.min = tmp.ptr.substring(18, 22).toInt() < tmp.min ? tmp.ptr.substring(18, 22).toInt() : tmp.min;
+				tmp.max = tmp.ptr.substring(23, 27).toInt() > tmp.max ? tmp.ptr.substring(23, 27).toInt() : tmp.max;
+				tmp.avg = round(tmp.ptr.substring(28, 32).toInt() / tmp.cnt);
+				tmp.cnt++;
 
-				parsable_data[temporary_data.ptr.substring(12, 14).toInt()].min = temporary_data.min;
-				parsable_data[temporary_data.ptr.substring(12, 14).toInt()].max = temporary_data.max;
-				parsable_data[temporary_data.ptr.substring(12, 14).toInt()].avg = temporary_data.avg;
+				processedData[tmp.ptr.substring(12, 14).toInt()].min = tmp.min;
+				processedData[tmp.ptr.substring(12, 14).toInt()].max = tmp.max;
+				processedData[tmp.ptr.substring(12, 14).toInt()].avg = tmp.avg;
 			}
 			else
-				temporary_data.time = temporary_data.ptr.substring(12, 14).toInt();
+				tmp.time = tmp.ptr.substring(12, 14).toInt();
 
-			temporary_data.ptr = "";
+			tmp.ptr = "";
 		}
 		else
-			temporary_data.ptr += fileRead;
+			tmp.ptr += fileRead;
 	}
 
 	Serial.println("Data has been set.");
 }
 
-String GetDataFileName()
+String getDataFileName()
 {
-	String file_name = "/";
-	file_name += display_date;
-	file_name += ".csv";
+	String fileName = "/";
+	fileName += displayDate;
+	fileName += ".csv";
 
-	return file_name;
+	return fileName;
 }
 
 void writeDataToCSV(int min, int max, int avg)
@@ -309,10 +308,10 @@ void writeDataToCSV(int min, int max, int avg)
 	struct DateTime
 	{
 		int year, month, date, hour, minute;
-	} date_time;
+	} dateTime;
 
 	// File holder for the main data file.
-	File file = SPIFFS.open(GetDataFileName(), FILE_APPEND);
+	File file = SPIFFS.open(getDataFileName(), FILE_APPEND);
 
 	if (!file)
 	{
@@ -320,129 +319,135 @@ void writeDataToCSV(int min, int max, int avg)
 		return;
 	}
 
-	char data_log[33] = "";
+	char dataLog[33] = "";
 
-	date_time.year = Clock.getYear();
-	date_time.month = Clock.getMonth(time_clock.century);
-	date_time.date = Clock.getDate();
-	date_time.hour = Clock.getHour(time_clock.format_12, time_clock.pm);
-	date_time.minute = Clock.getMinute();
+	dateTime.year = Clock.getYear();
+	dateTime.month = Clock.getMonth(timeClock.century);
+	dateTime.date = Clock.getDate();
+	dateTime.hour = Clock.getHour(timeClock.format12, timeClock.pm);
+	dateTime.minute = Clock.getMinute();
 
 	// Sor formázás
-	sprintf(data_log, "%04d.%02d.%02d. %02d:%02d,%04d,%04d,%04d", 2000 + date_time.year, date_time.month, date_time.date, date_time.hour, date_time.minute, min, max, avg);
+	sprintf(dataLog, "%04d.%02d.%02d. %02d:%02d,%04d,%04d,%04d", 2000 + dateTime.year, dateTime.month, dateTime.date, dateTime.hour, dateTime.minute, min, max, avg);
 
-	if (!file.println(data_log))
+	if (!file.println(dataLog))
 		Serial.println("Writing failed.");
 
-	Serial.println(data_log);
+	Serial.println(dataLog);
 	file.close();
 }
 
-String fileToString(const char *file_path)
+String fileToString(const char *path)
 {
-	File file_to_convert = SPIFFS.open(file_path);
-	if (!file_to_convert)
+	File file = SPIFFS.open(path);
+	if (!file)
 	{
 		Serial.println("Failed to open file. (File to String)");
 		return "";
 	}
 
-	String s = "";
-	while (file_to_convert.available())
+	String output = "";
+	while (file.available())
 	{
-		char fileRead = file_to_convert.read();
-		s += fileRead;
+		char fileRead = file.read();
+		output += fileRead;
 	}
 
-	return s;
+	return output;
 }
 
-void generateChart(File html_file)
+void generateChart(File html)
 {
-	for (size_t i = 0; i < *(&parsable_data + 1) - parsable_data; i++)
+	for (size_t i = 0; i < *(&processedData + 1) - processedData; i++)
 	{
-		parsable_data[i].min = parsable_data[i].min == 0 ? 1 : parsable_data[i].min;
-		parsable_data[i].max = parsable_data[i].max == 0 ? 1 : parsable_data[i].max;
-		parsable_data[i].avg = parsable_data[i].avg == 0 ? 1 : parsable_data[i].avg;
+		processedData[i].min = processedData[i].min == 0 ? 1 : processedData[i].min;
+		processedData[i].max = processedData[i].max == 0 ? 1 : processedData[i].max;
+		processedData[i].avg = processedData[i].avg == 0 ? 1 : processedData[i].avg;
 
-		html_file.print("<div class='bar1' style='--bar-value:");
-		html_file.print(round(parsable_data[i].max / 1050 * 100));
-		html_file.print("%;' data-name='");
-		html_file.print(i);
-		html_file.print("h' title='");
-		html_file.print(String(parsable_data[i].max));
-		html_file.print("'>");
+		html.print("<div class='bar1' style='--bar-value:");
+		html.print(round(processedData[i].max / 1050 * 100));
+		html.print("%;' data-name='");
+		html.print(i);
+		html.print("h' title='");
+		html.print(String(processedData[i].max));
+		html.print("'>");
 
-		html_file.print("<div class='bar2' style='--bar-value:");
-		html_file.print(round(parsable_data[i].avg / parsable_data[i].max * 100));
-		html_file.print("%;' data-name='");
-		html_file.print(i);
-		html_file.print("h' title='");
-		html_file.print(String(parsable_data[i].avg));
-		html_file.print("'>");
+		html.print("<div class='bar2' style='--bar-value:");
+		html.print(round(processedData[i].avg / processedData[i].max * 100));
+		html.print("%;' data-name='");
+		html.print(i);
+		html.print("h' title='");
+		html.print(String(processedData[i].avg));
+		html.print("'>");
 
-		html_file.print("<div class='bar3' style='--bar-value:");
-		html_file.print(round(parsable_data[i].min / parsable_data[i].avg * 100));
-		html_file.print("%;' data-name='");
-		html_file.print(i);
-		html_file.print("h' title='");
-		html_file.print(String(parsable_data[i].min));
-		html_file.print("'>");
+		html.print("<div class='bar3' style='--bar-value:");
+		html.print(round(processedData[i].min / processedData[i].avg * 100));
+		html.print("%;' data-name='");
+		html.print(i);
+		html.print("h' title='");
+		html.print(String(processedData[i].min));
+		html.print("'>");
 
-		html_file.print("</div></div></div>");
+		html.print("</div></div></div>");
 	}
 }
 
 // Imports the external CSS from SPIFFS.
-void MakePageHead(File html_file)
+void makeHead(File htmlFile)
 {
-	html_file.print("<head>");
-	html_file.print("<style>");
-	html_file.print(fileToString("/style.css"));
-	html_file.print("</style>");
-	html_file.print("</head>");
+	htmlFile.print("<head>");
+	htmlFile.print("<style>");
+	htmlFile.print(fileToString("/style.css"));
+	htmlFile.print("</style>");
+	htmlFile.print("</head>");
 }
 
 // Makes the chart for in the body.
-void MakePageBody(File html_file)
+void makeBody(File htmlFile)
 {
-	html_file.print("<body>");
-	html_file.print("<table class='graph'>");
-	html_file.print("<h1 style=\"margin-left: 10px; font-family: sans-serif; font-size: 25px; font-weight: bold;\">");
-	html_file.print(display_date);
-	html_file.print(".");
-	html_file.print("</h1>");
-	html_file.print("<div class='chart-wrap vertical'><div class='grid'>");
+	htmlFile.print("<body>");
+	htmlFile.print("<table class='graph'>");
+	htmlFile.print("<h1 style=\"margin-left: 10px; font-family: sans-serif; font-size: 25px; font-weight: bold;\">");
+	htmlFile.print(displayDate);
+	htmlFile.print(".");
+	htmlFile.print("</h1>");
+	htmlFile.print("<div class='chart-wrap vertical'><div class='grid'>");
 
-	generateChart(html_file);
+	generateChart(htmlFile);
 
-	html_file.print("</div>");
-	html_file.print("<div class=\"footr\">");
-	html_file.print("<button onclick=\"location.href='/prev'\" class='button button1' style=\"transform: translateX(20px);\">Elozo</button>");
-	html_file.print("<button onclick=\"location.href='/'\" class='button button1' style=\"transform: translateX(70px);\">Mai nap</button>");
-	html_file.print("<button onclick=\"location.href='/next'\" class='button button1' style=\"transform: translateX(120px);\">Kovetkezo</button>");
-	html_file.print("<button onclick=\"location.href='/data'\" class='button2' style=\"transform: translateX(550px);\">Data</button>");
-	html_file.print("</div></div></div>");
-	html_file.print("</body>");
+	htmlFile.print("</div>");
+
+	// ! Nincsenek gombok. Bocsi :(
+
+	htmlFile.print("<div class=\"footr\">");
+	htmlFile.print("<button onclick=\"location.href='/prev'\" class='button button1' style=\"transform: translateX(20px);\">Elozo</button>");
+	htmlFile.print("<button onclick=\"location.href='/'\" class='button button1' style=\"transform: translateX(70px);\">Mai nap</button>");
+	htmlFile.print("<button onclick=\"location.href='/next'\" class='button button1' style=\"transform: translateX(120px);\">Kovetkezo</button>");
+	htmlFile.print("<button onclick=\"location.href='/data'\" class='button2' style=\"transform: translateX(550px);\">Data</button>");
+	htmlFile.print("</div>");
+
+	htmlFile.print("</div></div>");
+
+	htmlFile.print("</body>");
 }
 
-void MakeIndexPage()
+void makePage()
 {
 	Serial.println("Attempting to make HTML page.");
 
-	File html_file = SPIFFS.open("/index.html", FILE_WRITE);
-	if (!html_file)
+	File htmlFile = SPIFFS.open("/index.html", FILE_WRITE);
+	if (!htmlFile)
 	{
 		Serial.println("Error making HTML page. (SPIFFS).");
 		return;
 	}
 
 	// Making the HTML page functionally.
-	html_file.print("<!DOCTYPE html>");
-	MakePageHead(html_file);
-	MakePageBody(html_file);
+	htmlFile.print("<!DOCTYPE html>");
+	makeHead(htmlFile);
+	makeBody(htmlFile);
 
-	html_file.close();
+	htmlFile.close();
 }
 
 // Init
@@ -455,8 +460,8 @@ void setup()
 
 	Wire.begin();
 
-	NetworkInitialization();
-	ClockInitialization();
+	networkInit();
+	timeInit();
 
 	sensors[0].emon.current(32, 10);
 	sensors[1].emon.current(33, 10);
@@ -466,6 +471,6 @@ void setup()
 // Process
 void loop()
 {
-	Server.handleClient();
-	GetCurrentData();
+	server.handleClient();
+	getData();
 }
