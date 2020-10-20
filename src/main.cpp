@@ -29,20 +29,46 @@ void setup()
 
 	Serial.print("Device version: v.");
 	Serial.println(VERSION);
-	Serial.print("Connecting to " + String(WIFI_SSID));
+	Serial.println("Connecting to " + String(WIFI_SSID));
 
 	WiFi.begin(WIFI_SSID, WIFI_PASS);
+
+	int retries = 0;
 	while (WiFi.status() != WL_CONNECTED)
 	{
-		Serial.print(".");
-		delay(500);
+		delay(1000);
+		Serial.println("Establishing connection to WiFi...");
+
+		retries++;
+
+		if (retries >= 20)
+		{
+			const char *LOCAL_SSID = "ESP 32";
+			const char *LOCAL_PASSWORD = "12345678";
+
+			// Connection variable for the local network.
+			IPAddress local_ip(10, 0, 0, 1);
+			IPAddress gateway(10, 0, 0, 254);
+			IPAddress subnet(255, 255, 255, 0);
+
+			WiFi.softAP(LOCAL_SSID, LOCAL_PASSWORD);
+			WiFi.softAPConfig(local_ip, gateway, subnet);
+			delay(100);
+
+			Serial.println("Failed connecting to outside network.");
+			break;
+		}
 	}
 
-	Serial.println(" connected!");
+	Serial.print("IP: ");
+	if (WiFi.status() == WL_CONNECTED)
+		Serial.println(WiFi.localIP());
+	else
+		Serial.println(WiFi.softAPIP());
+
 	_lastOTACheck = millis();
 
 	// your setup code goes here
-	Serial.println(getCurrentDate());
 }
 
 void loop()
@@ -54,4 +80,6 @@ void loop()
 	}
 
 	// your loop code goes here
+	Serial.print("Date: ");
+	Serial.println(getCurrentDate());
 }

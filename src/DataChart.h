@@ -2,10 +2,11 @@
 #define __DATACHART_H__
 
 #include <Arduino.h>
-#include <RTClib.h>
 #include <Wire.h>
 
+#include <RTClib.h>
+
 void InitializeTime();
-int getCurrentDate();
+String getCurrentDate();
 
 #endif // __DATACHART_H__
