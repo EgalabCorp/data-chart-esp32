@@ -69,6 +69,7 @@ void setup()
 	_lastOTACheck = millis();
 
 	// your setup code goes here
+	DataInit();
 }
 
 void loop()
@@ -80,6 +81,5 @@ void loop()
 	}
 
 	// your loop code goes here
-	Serial.print("Date: ");
-	Serial.println(getCurrentDate());
+	DataProcess();
 }
