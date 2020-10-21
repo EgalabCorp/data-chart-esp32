@@ -7,13 +7,8 @@
 
 #include <EmonLib.h>
 #include <SPIFFS.h>
-#include <Wire.h>
 #include <WebServer.h>
-
-#include <RTClib.h>
-
-void InitializeTime();
-String GetCurrentDate();
+#include <DS3231.h>
 
 struct CollectedData
 {
@@ -31,12 +26,20 @@ struct Sensor
 	double irms;
 };
 
+struct ClockProperties
+{
+	bool century, format_12, pm;
+};
+
 void GenerateChart(File html_file);
 void GenerateStyle(File html_file);
 
 void MakeHead(File html_file);
 void MakeBody(File html_file);
 void MakePage(File html_file);
+
+void InitializeTime();
+int GetCurrentDate();
 
 void GetChartData();
 void SetChartData();

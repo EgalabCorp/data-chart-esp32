@@ -2,12 +2,9 @@
 
 #define AMPERAGE_MAX 1200
 
-RTC_DS3231 rtc;
-int display_date = 20201014;
-
 void DataInit()
 {
-	// ! InitializeTime();
+	InitializeTime();
 	InitializeSensors();
 	InitializeServer();
 }
@@ -18,30 +15,48 @@ void DataProcess()
 }
 
 /*
-Nem működik az RTClib, vagy legalább is nem találja.
-Ha inicializálom, amikor elér az abort()-hoz, akkor a board
-újraindul. Ez a kód igazából az oldalon lévő example-ből épül
-fel, és nem változtattam rajta semmit, azon kívűl, hogy az egy-soros
-if statement körül kiszedtem a lezárásokat. A másik megoldás
-amivel próbálkoztam, az a Wire.h, mert kellhet, de nem írja sehol sem.
+* Nem működik az RTClib, vagy legalább is nem találja.
+* Ha inicializálom, amikor elér az abort()-hoz, akkor a board
+* újraindul. Ez a kód igazából az oldalon lévő example-ből épül
+* fel, és nem változtattam rajta semmit, azon kívűl, hogy az egy-soros
+* if statement körül kiszedtem a lezárásokat. Hozzáadtam a "Wire.h"
+* libet, de még így se működik.
 */
+
+DS3231 ds_clock;
+
+ClockProperties clock_props;
+int display_date = 20201014;
+
+int GetCurrentDate()
+{
+	char date_buf[9];
+	sprintf(date_buf, "%04d%02d%02d", 2000 + ds_clock.getYear(), ds_clock.getMonth(clock_props.century), ds_clock.getDate());
+
+	return String(date_buf).toInt();
+}
 
 void InitializeTime()
 {
-	Wire.begin();
+	Serial.println("Initializing time...");
 
-	if (!rtc.begin())
+	for (int i = 0; i < 5; i++)
 	{
-		Serial.println("Couldn't find RTC.");
-		Serial.flush();
-		abort();
+		delay(1000);
+		Serial.print(ds_clock.getYear(), DEC);
+		Serial.print(".");
+		Serial.print(ds_clock.getMonth(clock_props.century), DEC);
+		Serial.print(".");
+		Serial.print(ds_clock.getDate(), DEC);
+		Serial.print(". ");
+		Serial.print(ds_clock.getHour(clock_props.format_12, clock_props.pm), DEC);
+		Serial.print(":");
+		Serial.print(ds_clock.getMinute(), DEC);
+		Serial.print(":");
+		Serial.println(ds_clock.getSecond(), DEC);
 	}
 
-	if (rtc.lostPower())
-		rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-
-	// Nincs szükség a 32K pin-re.
-	rtc.disable32K();
+	display_date = GetCurrentDate();
 }
 
 void GenerateStyle(File css_file = SPIFFS.open("/style.css"), File html_file = SPIFFS.open("/index.html"))
@@ -261,9 +276,7 @@ void WriteDataToCSV(int min, int max, int avg, File data_file)
 	if (!data_file)
 		return;
 
-	DateTime now = rtc.now();
-
-	int year = now.year(), month = now.month(), day = now.day(), hour = now.hour(), minute = now.minute();
+	int year = ds_clock.getYear(), month = ds_clock.getMonth(clock_props.century), day = ds_clock.getDate(), hour = ds_clock.getHour(clock_props.format_12, clock_props.pm), minute = ds_clock.getMinute();
 	char data_log[33];
 
 	sprintf(data_log, "%04d.%02d.%02d. %02d:%02d,%04d,%04d,%04d",
@@ -310,7 +323,7 @@ void StreamFile(const char *path, String mimeType)
 
 void GetNextDay()
 {
-	for (size_t i = display_date + 1; i <= GetCurrentDate().toInt(); i++)
+	for (size_t i = display_date + 1; i <= GetCurrentDate(); i++)
 	{
 		File data_file = SPIFFS.open(GetDataFileName(), FILE_READ);
 
@@ -348,13 +361,6 @@ void GetPreviousDay()
 	}
 }
 
-String GetCurrentDate()
-{
-	DateTime now = rtc.now();
-	char buf[] = "YYYYMMDD";
-	return now.toString(buf);
-}
-
 // If the server was not found, the device would return 404.
 void HandleNotFound()
 {
@@ -365,7 +371,7 @@ void HandleNotFound()
 void HandleToday()
 {
 	Serial.println("Handling current day record.");
-	display_date = GetCurrentDate().toInt();
+	display_date = GetCurrentDate();
 	HandleOnConnect();
 }
 
