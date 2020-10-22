@@ -9,9 +9,7 @@
 #include <EmonLib.h>
 #include <SPIFFS.h>
 #include <WebServer.h>
-
-void DataInit();
-void DataProcess();
+#include <Wire.h>
 
 struct CollectedData
 {
@@ -34,9 +32,6 @@ struct ClockProperties
 	bool century, format_12, pm;
 };
 
-void InitializeTime();
-int GetCurrentDate();
-
 void GenerateChart(File html_file);
 void GenerateStyle(File html_file);
 
@@ -44,23 +39,28 @@ void MakeHead(File html_file);
 void MakeBody(File html_file);
 void MakePage(File html_file);
 
-void WriteDataToCSV(int min, int max, int avg, File data_file);
+void InitializeTime();
+int GetCurrentDate();
 
-void SetChartData();
 void GetChartData();
-
-void InitializeSensors();
+void SetChartData();
 
 String GetDataFileName();
 
+void WriteDataToCSV(int min, int max, int avg);
+
+void InitializeSensors();
+
 void StreamFile(const char *path, String mimeType);
-void HandleOnConnect();
 void GetNextDay();
 void GetPreviousDay();
+void HandleNotFound();
 void HandleToday();
 void HandlePrevDay();
 void HandleNextDay();
-void HandleNotFound();
 void InitializeServer();
+
+void DataInit();
+void DataProcess();
 
 #endif // __DATACHART_H__

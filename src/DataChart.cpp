@@ -2,8 +2,25 @@
 
 #define AMPERAGE_MAX 1200
 
+WebServer server;
+
+ParsableData data_pack[24];
+
+DS3231 ds_clock;
+ClockProperties clock_props;
+int display_date = 0;
+
+Sensor sensors[3];
+
+CollectedData collected_data;
+
 void DataInit()
 {
+	Wire.begin(13, 16);
+
+	if (!SPIFFS.begin())
+		Serial.println("Failed SPIFFS inizialization.");
+
 	InitializeTime();
 	InitializeSensors();
 	InitializeServer();
@@ -11,6 +28,7 @@ void DataInit()
 
 void DataProcess()
 {
+	server.handleClient();
 	GetChartData();
 }
 
@@ -23,10 +41,13 @@ void DataProcess()
 * libet, de még így se működik.
 */
 
-DS3231 ds_clock;
+int GetCurrentDate()
+{
+	char date_buf[9];
+	sprintf(date_buf, "%04d%02d%02d", 2000 + ds_clock.getYear(), ds_clock.getMonth(clock_props.century), ds_clock.getDate());
 
-ClockProperties clock_props;
-int display_date = 20201014;
+	return String(date_buf).toInt();
+}
 
 void InitializeTime()
 {
@@ -51,133 +72,30 @@ void InitializeTime()
 	display_date = GetCurrentDate();
 }
 
-int GetCurrentDate()
-{
-	char date_buf[9];
-	sprintf(date_buf, "%04d%02d%02d", 2000 + ds_clock.getYear(), ds_clock.getMonth(clock_props.century), ds_clock.getDate());
-
-	return String(date_buf).toInt();
-}
-
-ParsableData data_pack[24];
-
-void GenerateChart(File html_file)
-{
-	for (size_t i = 0; i < *(&data_pack + 1) - data_pack; i++)
-	{
-		// The devider cannot be 0.
-		data_pack[i].min = data_pack[i].min == 0 ? 1 : data_pack[i].min;
-		data_pack[i].max = data_pack[i].max == 0 ? 1 : data_pack[i].max;
-		data_pack[i].avg = data_pack[i].avg == 0 ? 1 : data_pack[i].avg;
-
-		// Bar 3
-		html_file.print("<div class='bar1' style='--bar-value:");
-		html_file.print(round(data_pack[i].max / 12));
-		html_file.print("%;' data-name='");
-		html_file.print(i);
-		html_file.print("h' title='");
-		html_file.print(String(data_pack[i].max));
-		html_file.print("'>");
-
-		// Bar 2
-		html_file.print("<div class='bar2' style='--bar-value:");
-		html_file.print(round(data_pack[i].avg / data_pack[i].max * 100));
-		html_file.print("%;' data-name='");
-		html_file.print(i);
-		html_file.print("h' title='");
-		html_file.print(String(data_pack[i].avg));
-		html_file.print("'>");
-
-		// Bar 3
-		html_file.print("<div class='bar3' style='--bar-value:");
-		html_file.print(round(data_pack[i].min / data_pack[i].avg * 100));
-		html_file.print("%;' data-name='");
-		html_file.print(i);
-		html_file.print("h' title='");
-		html_file.print(String(data_pack[i].min));
-		html_file.print("'>");
-
-		// Close the class down.
-		html_file.print("</div></div></div>");
-	}
-}
-
 void GenerateStyle(File html_file)
 {
-	File css_file = SPIFFS.open("/style.css");
-	if (!css_file) return;
+	File css_file = SPIFFS.open("/style.css", FILE_READ);
+	if (!css_file)
+		return;
 
+	String tmp_ptr;
 	while (css_file.available())
-		html_file.print(String(css_file.read()));
+	{
+		char file_read = css_file.read();
+		tmp_ptr += file_read;
+	}
+	html_file.print(tmp_ptr);
+
+	css_file.close();
 }
 
 void MakeHead(File html_file)
 {
 	html_file.print("<head>");
 	html_file.print("<style>");
-	GenerateChart(html_file);
+	GenerateStyle(html_file);
 	html_file.print("</style>");
 	html_file.print("</head>");
-}
-
-void MakeBody(File html_file)
-{
-	html_file.print("<body>");
-	html_file.print("<table class='graph'>");
-	html_file.print("<h1 style=\"margin-left: 10px; font-family: sans-serif; font-size: 25px; font-weight: bold;\">");
-	html_file.print(display_date);
-	html_file.print(".");
-	html_file.print("</h1>");
-	html_file.print("<div class='chart-wrap vertical'><div class='grid'>");
-	GenerateChart(html_file);
-	html_file.print("</div>");
-	html_file.print("<div class=\"footr\">");
-	html_file.print("<button onclick=\"location.href='/prev'\" class='button button1' style=\"transform: translateX(20px);\">Elozo</button>");
-	html_file.print("<button onclick=\"location.href='/'\" class='button button1' style=\"transform: translateX(70px);\">Mai nap</button>");
-	html_file.print("<button onclick=\"location.href='/next'\" class='button button1' style=\"transform: translateX(120px);\">Kovetkezo</button>");
-	html_file.print("<button onclick=\"location.href='/data'\" class='button2' style=\"transform: translateX(550px);\">Data</button>");
-	html_file.print("</div></div></div>");
-	html_file.print("</body>");
-}
-
-void MakePage()
-{
-	File html_file = SPIFFS.open("/index.html");
-	if (!html_file) return;
-
-	Serial.println("Making HTML page.");
-
-	// Making the HTML page functionally.
-	html_file.print("<!DOCTYPE html>");
-	MakeHead(html_file);
-	MakeBody(html_file);
-
-	html_file.close();
-}
-
-void WriteDataToCSV(int min, int max, int avg, File data_file)
-{
-	if (!data_file)
-		return;
-
-	int year = ds_clock.getYear(), month = ds_clock.getMonth(clock_props.century), day = ds_clock.getDate(), hour = ds_clock.getHour(clock_props.format_12, clock_props.pm), minute = ds_clock.getMinute();
-	char data_log[33];
-
-	sprintf(data_log, "%04d.%02d.%02d. %02d:%02d,%04d,%04d,%04d",
-			2000 + year,
-			month,
-			day,
-			hour,
-			minute,
-			min,
-			max,
-			avg);
-
-	if (!data_file.println(data_log))
-		Serial.println("Failed writting data file.");
-
-	Serial.println(data_log);
-	data_file.close();
 }
 
 void SetChartData()
@@ -187,7 +105,7 @@ void SetChartData()
 		String ptr;
 		float min = AMPERAGE_MAX, max, avg;
 		int time, cnt = 1;
-		File file = SPIFFS.open(GetDataFileName());
+		File file = SPIFFS.open(GetDataFileName(), FILE_READ);
 	} tmp_data;
 
 	if (!tmp_data.file)
@@ -224,17 +142,96 @@ void SetChartData()
 	}
 }
 
-CollectedData collected_data;
-Sensor sensors[3];
+void GenerateChart(File html_file)
+{
+	for (size_t i = 0; i < *(&data_pack + 1) - data_pack; i++)
+	{
+		data_pack[i].min = data_pack[i].min == 0 ? 1 : data_pack[i].min;
+		data_pack[i].max = data_pack[i].max == 0 ? 1 : data_pack[i].max;
+		data_pack[i].avg = data_pack[i].avg == 0 ? 1 : data_pack[i].avg;
+
+		html_file.print("<div class='bar1' style='--bar-value:");
+		html_file.print(round(data_pack[i].max / 12));
+		html_file.print("%;' data-name='");
+		html_file.print(i);
+		html_file.print("h' title='");
+		html_file.print(String(data_pack[i].max));
+		html_file.print("'>");
+
+		html_file.print("<div class='bar2' style='--bar-value:");
+		html_file.print(round(data_pack[i].avg / data_pack[i].max * 100));
+		html_file.print("%;' data-name='");
+		html_file.print(i);
+		html_file.print("h' title='");
+		html_file.print(String(data_pack[i].avg));
+		html_file.print("'>");
+
+		html_file.print("<div class='bar3' style='--bar-value:");
+		html_file.print(round(data_pack[i].min / data_pack[i].avg * 100));
+		html_file.print("%;' data-name='");
+		html_file.print(i);
+		html_file.print("h' title='");
+		html_file.print(String(data_pack[i].min));
+		html_file.print("'>");
+
+		html_file.print("</div></div></div>");
+	}
+}
+
+void MakeBody(File html_file)
+{
+	if (!html_file)
+		return;
+
+	html_file.print("<body>");
+	html_file.print("<table class='graph'>");
+	html_file.print("<h1 style=\"margin-left: 10px; font-family: sans-serif; font-size: 25px; font-weight: bold;\">");
+	html_file.print(display_date);
+	html_file.print(".");
+	html_file.print("</h1>");
+	html_file.print("<div class='chart-wrap vertical'><div class='grid'>");
+
+	GenerateChart(html_file);
+
+	html_file.print("</div>");
+	html_file.print("<div class=\"footr\">");
+	html_file.print("<button onclick=\"location.href='/prev'\" class='button button1' style=\"transform: translateX(20px);\">Elozo</button>");
+	html_file.print("<button onclick=\"location.href='/'\" class='button button1' style=\"transform: translateX(70px);\">Mai nap</button>");
+	html_file.print("<button onclick=\"location.href='/next'\" class='button button1' style=\"transform: translateX(120px);\">Kovetkezo</button>");
+	html_file.print("<button onclick=\"location.href='/data'\" class='button2' style=\"transform: translateX(550px);\">Data</button>");
+	html_file.print("</div></div></div>");
+	html_file.print("</body>");
+}
+
+void MakePage()
+{
+	File html_file = SPIFFS.open("/index.html", FILE_WRITE);
+	if (!html_file)
+		return;
+
+	Serial.println("Making HTML page.");
+
+	// Making the HTML page functionally.
+	html_file.print("<!DOCTYPE html>");
+	MakeHead(html_file);
+	MakeBody(html_file);
+
+	html_file.close();
+}
+
+void InitializeSensors()
+{
+	sensors[0].emon.current(32, 10);
+	sensors[1].emon.current(33, 10);
+	sensors[2].emon.current(35, 10);
+}
 
 void GetChartData()
 {
-	DateTime now;
-
-	if (collected_data.time == now.minute())
+	if (collected_data.time == ds_clock.getMinute())
 		return;
 
-	collected_data.time = now.minute();
+	collected_data.time = ds_clock.getMinute();
 
 	for (size_t i = 0; i < *(&sensors + 1) - sensors; i++)
 	{
@@ -247,7 +244,7 @@ void GetChartData()
 
 	if (collected_data.cnt == 5)
 	{
-		WriteDataToCSV(collected_data.min, collected_data.max, collected_data.sum / collected_data.cnt, SPIFFS.open(GetDataFileName(), FILE_APPEND));
+		WriteDataToCSV(collected_data.min, collected_data.max, collected_data.sum / collected_data.cnt);
 
 		collected_data.min = AMPERAGE_MAX;
 		collected_data.max = 0;
@@ -259,13 +256,6 @@ void GetChartData()
 	Serial.println("Got minute data.");
 }
 
-void InitializeSensors()
-{
-	sensors[0].emon.current(32, 10);
-	sensors[1].emon.current(33, 10);
-	sensors[2].emon.current(35, 10);
-}
-
 String GetDataFileName()
 {
 	String file_name = "/";
@@ -275,29 +265,54 @@ String GetDataFileName()
 	return file_name;
 }
 
-WebServer server;
-
-void StreamFile(const char *path, String mimeType)
+void WriteDataToCSV(int min, int max, int avg)
 {
-	// Streaming the generated html file, if it exists.
-	if (SPIFFS.exists(path))
-	{
-		File file = SPIFFS.open(path, "r");
-		server.streamFile(file, mimeType);
-		file.close();
-	}
-	else
-		HandleNotFound();
+	File data_file = SPIFFS.open(GetDataFileName(), FILE_APPEND);
+	if (!data_file) return;
+
+	int year = ds_clock.getYear(), month = ds_clock.getMonth(clock_props.century), day = ds_clock.getDate(), hour = ds_clock.getHour(clock_props.format_12, clock_props.pm), minute = ds_clock.getMinute();
+	char data_log[33];
+
+	sprintf(data_log, "%04d.%02d.%02d. %02d:%02d,%04d,%04d,%04d",
+			2000 + year,
+			month,
+			day,
+			hour,
+			minute,
+			min,
+			max,
+			avg);
+
+	if (!data_file.println(data_log))
+		Serial.println("Failed writting data file.");
+
+	Serial.println(data_log);
+	data_file.close();
 }
 
 // On connect, the device would recieve the HTML data.
 void HandleOnConnect()
 {
 	Serial.println("Connection handling called.");
+	Serial.print("Display date: ");
+	Serial.println(display_date);
 
 	SetChartData();							// Aligns the data for the HTML page.
 	MakePage();								// Making HTML page.
 	StreamFile("/index.html", "text/html"); // Streaming HTML.
+}
+
+void StreamFile(const char *path, String mimeType)
+{
+	// Streaming the generated html file, if it exists.
+	if (SPIFFS.exists(path))
+	{
+		File file = SPIFFS.open(path, FILE_READ);
+		server.streamFile(file, mimeType);
+		file.close();
+	}
+	else
+		HandleNotFound();
 }
 
 void GetNextDay()
@@ -322,7 +337,7 @@ void GetNextDay()
 
 void GetPreviousDay()
 {
-	for (size_t i = display_date - 1; i > 20201013; i--)
+	for (size_t i = display_date - 1; i > 20201015; i--)
 	{
 		File data_file = SPIFFS.open(GetDataFileName(), FILE_READ);
 
@@ -340,17 +355,17 @@ void GetPreviousDay()
 	}
 }
 
+// If the server was not found, the device would return 404.
+void HandleNotFound()
+{
+	Serial.println("Error: 404 (Not found)");
+	server.send(404, "text/plain", "Not found");
+}
+
 void HandleToday()
 {
 	Serial.println("Handling current day record.");
 	display_date = GetCurrentDate();
-	HandleOnConnect();
-}
-
-void HandleNextDay()
-{
-	Serial.println("Handling next day record.");
-	GetNextDay();
 	HandleOnConnect();
 }
 
@@ -361,11 +376,11 @@ void HandlePrevDay()
 	HandleOnConnect();
 }
 
-// If the server was not found, the device would return 404.
-void HandleNotFound()
+void HandleNextDay()
 {
-	Serial.println("Error: 404 (Not found)");
-	server.send(404, "text/plain", "Not found");
+	Serial.println("Handling next day record.");
+	GetNextDay();
+	HandleOnConnect();
 }
 
 void HandleDump()
