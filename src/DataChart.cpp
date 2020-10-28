@@ -1,10 +1,6 @@
 #include "DataChart.h"
 
-#define AMPERAGE_MAX 1200
-
 WebServer server;
-
-ParsableData data_pack[24];
 
 DS3231 ds_clock;
 ClockProperties clock_props;
@@ -12,7 +8,7 @@ int display_date = 0;
 
 Sensor sensors[3];
 
-CollectedData collected_data;
+ChartData data_pack[24], collected_data;
 
 void DataInit()
 {

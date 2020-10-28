@@ -11,14 +11,11 @@
 #include <WebServer.h>
 #include <Wire.h>
 
-struct CollectedData
-{
-	int min, max, time, sum, cnt = 1;
-};
+#define AMPERAGE_MAX 1200
 
-struct ParsableData
+struct ChartData
 {
-	int min, max, avg;
+	int min = AMPERAGE_MAX, max, avg, time, sum, cnt = 1;
 };
 
 struct Sensor
