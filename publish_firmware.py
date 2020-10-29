@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from os import environ
 import requests
 import sys
 from os.path import basename
@@ -63,7 +64,7 @@ def publish_firmware(source, target, env):
                          data=open(firmware_path, "rb"),
                          headers=headers,
                          auth=(bintray_config.get("user"),
-                               bintray_config['api_token']))
+                               environ['BINTRAY_API_TOKEN']))
         r.raise_for_status()
     except requests.exceptions.RequestException as e:
         sys.stderr.write("Failed to submit package: %s\n" %
