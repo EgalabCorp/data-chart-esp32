@@ -7,8 +7,4 @@
 # Because OTA only works with manual tokens I will
 # put the `platform.ini` file to `.gitignore` due
 # to security reasons. Remove if solution found.
-<<<<<<< HEAD
 platformio.ini
-=======
-platform.ini
->>>>>>> d1e50c679ae15b198acafccd331e3f4df35231bc
