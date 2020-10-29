@@ -3,3 +3,8 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+
+# Because OTA only works with manual tokens I will
+# put the `platform.ini` file to `.gitignore` due
+# to security reasons. Remove if solution found.
+platformio.ini
